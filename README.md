@@ -109,7 +109,13 @@ python instalar.py
 
 Um menu em português guia a instalação: confere o Docker, cria o `.env` perguntando a
 senha, sobe o banco, cria a tabela, carrega os dados, sobe a API e testa os 3 endpoints.
-A opção `8` faz tudo na ordem; a `9` desinstala explicando antes o que será apagado.
+A opção `8` faz tudo na ordem; a `9` desinstala explicando antes o que será apagado; e a
+`10` lista todos os comandos manuais, com o efeito e a saída esperada de cada um — para
+quem quer digitar em vez de usar o menu.
+
+Todos os passos valem para os dois ambientes. O instalador detecta se você está usando
+**Docker local** ou **banco na nuvem (Neon)** e ajusta o caminho sozinho; a opção `10`
+mostra os dois lados.
 
 ### Modo manual
 
@@ -288,22 +294,31 @@ O que este projeto **não** faz — de propósito, por escopo do degrau:
 
 ## Evidências
 
-Saídas reais do programa, capturadas em 29/10/2026. As imagens são desenhadas a
-partir do texto real (não são fotografias da tela) — a ressalva e o comando de cada uma
-estão em [`docs/img/LOG-IMAGENS.md`](docs/img/LOG-IMAGENS.md).
+Saídas reais do programa, capturadas em 29/10/2026 contra o banco no Neon. A imagem do
+Swagger é captura de tela; as demais são desenhadas a partir do texto real do terminal —
+a ressalva e o comando de reprodução de cada uma estão em
+[`docs/img/LOG-IMAGENS.md`](docs/img/LOG-IMAGENS.md).
 
 ![Menu do instalador com as 10 opções e o banco configurado](docs/img/01-menu-instalador.png)
 
 *O menu do instalador: cada opção tem descrição, o banco atual aparece no cabeçalho e a
 opção `0` encerra.*
 
+![Documentação interativa da API com os três endpoints](docs/img/19-swagger.png)
+
+*A API aberta em `http://localhost:8000/docs`: os três endpoints publicados e o contrato
+OpenAPI gerado automaticamente pelo FastAPI.*
+
+![Verificação dos endpoints com comando, esperado, obtido e veredito](docs/img/18-testes-com-feedback.png)
+
+*A opção 7 não devolve um "ok" solto: mostra o comando que você pode repetir, o resultado
+esperado, o que voltou do banco e por que passou. Aqui, 4 de 4 — com 563 registros na
+série e 561 no filtro de reais.*
+
 ![Erro do instalador quando o Docker não existe, com motivo e próximo passo](docs/img/12-sem-docker-condicionante.png)
 
 *A condicionante do Docker: o fluxo para antes de tentar rodar comando impossível e diz o
 motivo e o que fazer agora.*
-
-As demais (`02-pre-requisitos.png`, `11-opcao-invalida.png` e `13-opcao-8-etapas.png`)
-estão em [`docs/img/`](docs/img/), com a legenda no mesmo log.
 
 ![Opção 8 anunciando as 6 etapas e dizendo em qual parou](docs/img/13-opcao-8-etapas.png)
 

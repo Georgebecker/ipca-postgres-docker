@@ -19,8 +19,11 @@ gerou e a entrada digitada. O resto é a saída, copiada sem edição.
 | `10-estado-sem-docker.txt` | O menu **não quebra** sem Docker: avisa, diz o que não conseguiu consultar e segue | `python meu-loop-agente/workspace/config.py` (entrada `7`, depois `0`) |
 | `11-opcao-invalida.txt` | Resposta inválida é explicada (o que foi recusado, o que é aceito, qual é o padrão) | `python instalar.py` (entrada `x`, depois `0`) |
 | `12-sem-docker-condicionante.txt` | A condicionante do Docker mostra **condição + motivo + o que fazer agora** | `python instalar.py` (entrada `4`, depois `0`) |
+| `13-opcao-8-etapas.txt` | A opção 8 anuncia etapas numeradas (1/6…6/6) e, ao falhar, diz onde parou e o que fazer | `python instalar.py` (entrada `8`, depois `0`) |
 | `14-neon-setup.txt` | O Neon está autenticado, o projeto existe e o banco responde a uma query | `neon orgs list`, `neon projects list`, `neon psql` |
 | `15-neon-tabela-populada.txt` | A tabela `ipca` foi criada e recebeu **563 linhas** (561 + 2), conferidas por 3 consultas | `neon psql` com `init.sql` e `seed.sql` |
+| `16-neon-api-endpoints.txt` | A API local responde os 3 endpoints lendo o banco na nuvem (`origem: nuvem (DATABASE_URL)`) | `python instalar.py` (entrada `6`) |
+| `17-testes-com-feedback.txt` | Cada endpoint aparece com comando, esperado, obtido e veredito — **4 de 4 passaram**, com os números conferidos (563 e 561) | `python instalar.py` (entrada `7`, depois `0`) |
 
 Todas foram geradas na máquina de desenvolvimento, **sem Docker**, porque nenhuma delas
 precisa de container.

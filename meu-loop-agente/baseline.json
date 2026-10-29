@@ -4,8 +4,8 @@
   "meta_absoluta": 3,
   "meta_percentual": null,
   "progresso": {
-    "iteracao_atual": 8,
-    "aceitos": 8,
+    "iteracao_atual": 9,
+    "aceitos": 9,
     "rejeitados": 0,
     "rejeicoes_consecutivas": 0
   },
@@ -41,9 +41,15 @@
       "variacao_percentual": 0.0,
       "data": "2026-10-29T19:49:32Z",
       "fonte": "medido pelo verificador (3 endpoints respondendo)"
+    },
+    {
+      "iteracao": 9,
+      "valor": 3,
+      "decisao": "ACEITO",
+      "resumo": "verificacao com comando, esperado, obtido e veredito (4 casos)"
     }
   ],
-  "atualizado_em": "2026-10-29T19:49:32Z",
+  "atualizado_em": "2026-10-29T20:05:00Z",
   "estado_inicial": {
     "data": "2026-10-29",
     "banco_existe": false,

@@ -105,3 +105,15 @@
 - **Fonte da medição**: MEDIDA — a API subiu localmente apontando para o Neon e os 3 endpoints responderam 200 (`endpoints ok: 3`), não é declaração
 - **Justificativa do aceite**: o verificador sugeriu REJEITADO porque a métrica não mudou (3 → 3); a decisão do dono foi ACEITO porque o objetivo é adaptar o ambiente, não melhorar a métrica — e pela primeira vez a medição foi real, não declarada
 
+## Iteração 9
+- **Hipótese**: A verificação dizia apenas "ok"/"falhou" por endpoint. Mostrar, para cada um, o comando reproduzível, o resultado esperado, o resultado obtido e o motivo do veredito transforma o teste em prova que o dono pode repetir sozinho — e permite comparar o número (563 registros, 561 reais) em vez de confiar no "verde"
+- **Arquivos alterados**: instalar.py (`testar_endpoints` reescrito com `CASOS_DE_TESTE` e `_resumir_corpo`; nova `mostrar_comandos_manuais` na opção 10), docs/evidencias/17-testes-com-feedback.txt (novo), docs/img/18-testes-com-feedback.png (novo), docs/img/LOG-IMAGENS.md
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0,00% — iteração de prova e comunicação; a métrica do degrau não muda
+- **Comandos passaram**: Sim (`py_compile`; opção 7 executou 4 casos e reportou "4 de 4 testes passaram"; opção 10 listou todos os comandos manuais por ambiente)
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T20:05:00Z
+- **Fonte da medição**: MEDIDA — os 4 casos rodaram contra a API no ar apontando para o Neon e os números vieram do banco (`/ipca/serie` = 563 itens, `?tipo=real` = 561 itens)
+- **Justificativa do aceite**: o ganho não está na métrica, e sim na dirigibilidade: qualquer pessoa repete o comando do curl, compara com o esperado escrito na tela e entende por que passou ou falhou. É o mesmo princípio do degrau — evidência, não opinião
+

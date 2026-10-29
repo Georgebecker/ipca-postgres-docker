@@ -32,6 +32,7 @@ Windows Terminal ou o terminal do VS Code para ver tudo.
 """
 
 import getpass
+import json
 import platform
 import shutil
 import subprocess
@@ -1090,51 +1091,150 @@ def subir_api(ambiente: str = None) -> bool:
 # 12. Opcao 7 — testar os endpoints
 # ===========================================================================
 
+CASOS_DE_TESTE = [
+    {
+        "caminho": "/health",
+        "nome": "prova de vida",
+        "esperado": "status=ok e postgres=ok (o banco respondeu)",
+        "conferir": lambda dados: dados.get("status") == "ok" and dados.get("postgres") == "ok",
+        "mostrar": ("status", "postgres", "versao_postgres", "origem"),
+    },
+    {
+        "caminho": "/ipca/ultimo",
+        "nome": "registro mais recente",
+        "esperado": "um objeto com data, valor e tipo",
+        "conferir": lambda dados: all(c in dados for c in ("data", "valor", "tipo")),
+        "mostrar": ("data", "valor", "tipo"),
+    },
+    {
+        "caminho": "/ipca/serie",
+        "nome": "serie completa",
+        "esperado": "lista com os 563 registros (561 reais + 2 ficticios)",
+        "conferir": lambda dados: isinstance(dados, list) and len(dados) == 563,
+        "mostrar": None,
+    },
+    {
+        "caminho": "/ipca/serie?tipo=real",
+        "nome": "filtro de reais",
+        "esperado": "lista com 561 registros, sem os ficticios de 2099",
+        "conferir": lambda dados: isinstance(dados, list) and len(dados) == 561,
+        "mostrar": None,
+    },
+]
+
+
+def _resumir_corpo(dados) -> str:
+    """Monta uma descrição curta do corpo da resposta, para caber na tela."""
+    if isinstance(dados, list):
+        if not dados:
+            return "lista vazia"
+        primeiro = dados[0]
+        ultimo = dados[-1]
+        return (str(len(dados)) + " itens | primeiro: " + str(primeiro)
+                + " | ultimo: " + str(ultimo))
+    if isinstance(dados, dict):
+        return str(dados)
+    return str(dados)[:120]
+
+
 def testar_endpoints() -> bool:
-    """Faz uma chamada em cada um dos 3 endpoints e mostra o que voltou."""
-    titulo("Testando os 3 endpoints")
+    """Chama os endpoints e mostra, para cada um, comando, esperado, obtido e veredito.
+
+    Motivo de ser tão detalhado: "deu certo" sem o número ao lado não convence
+    ninguém. Aqui cada linha mostra o comando que qualquer pessoa pode repetir,
+    o que era esperado, o que realmente voltou e por que passou ou falhou.
+    """
+    titulo("Testando os endpoints da API")
     explicar(
-        "Motivo: e a prova final. Container de pe nao garante que a API responde.",
-        "Vou chamar os tres e mostrar o status HTTP (200 = deu certo).",
+        "Motivo: é a prova final. A API estar de pé não garante que ela responde,",
+        "nem que está lendo o banco certo.",
+        "",
+        "Para cada endpoint eu mostro:",
+        "  1) o comando que você pode repetir (curl e navegador);",
+        "  2) o resultado esperado;",
+        "  3) o resultado que voltou;",
+        "  4) o veredito, com o motivo.",
     )
-    caminhos = ["/health", "/ipca/ultimo", "/ipca/serie?tipo=real"]
+
     aprovados = 0
 
-    for caminho in caminhos:
-        url = URL_API + caminho
+    for caso in CASOS_DE_TESTE:
+        url = URL_API + caso["caminho"]
         print("")
-        print("  # chamar " + url)
+        print("  " + "-" * 62)
+        print("  " + caso["nome"].upper() + "  (" + caso["caminho"] + ")")
+        print("  comando  : curl \"" + url + "\"")
+        print("  navegador: " + url)
+        print("  esperado : " + caso["esperado"])
+
         try:
-            with urllib.request.urlopen(url, timeout=10) as resposta:
-                corpo = resposta.read().decode("utf-8", "replace")
+            with urllib.request.urlopen(url, timeout=15) as resposta:
                 status = resposta.status
+                corpo = resposta.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as falha:
-            erro(caminho + " -> HTTP " + str(falha.code) + " (o pedido chegou, a resposta foi de erro).")
+            erro("HTTP " + str(falha.code) + " — o pedido chegou, mas a resposta foi de erro.")
+            explicar("  motivo: o endpoint existe, porém devolveu erro (veja o corpo acima).")
+            o_que_fazer("se for 503, o banco não respondeu; confira a opção 4.",
+                        "se for 404, a rota não existe nesta versão da API.")
             continue
-        except urllib.error.URLError:
-            erro(caminho + " -> sem conexao (a API nao esta no ar?).")
-            o_que_fazer("suba a API com a opcao 6 e tente de novo.")
+        except urllib.error.URLError as falha:
+            erro("sem conexão — a API não está no ar.")
+            explicar("  motivo: " + str(falha.reason) + ".")
+            o_que_fazer("suba a API com a opção 6 e rode este teste de novo.")
             continue
 
-        if status == 200:
+        try:
+            dados = json.loads(corpo)
+        except json.JSONDecodeError:
+            erro("a resposta não é JSON válido.")
+            print("  obtido   : " + corpo[:120])
+            o_que_fazer("veja o terminal do Uvicorn: provavelmente houve exceção na rota.")
+            continue
+
+        print("  obtido   : " + _resumir_corpo(dados))
+
+        # Veredito: dois critérios, status e conteúdo.
+        if status != 200:
+            aviso("HTTP " + str(status) + " (200 era o esperado).")
+            continue
+
+        try:
+            confere = bool(caso["conferir"](dados))
+        except Exception:
+            confere = False
+
+        if confere:
             aprovados += 1
-            ok(caminho + " -> 200 | " + corpo[:90] + ("..." if len(corpo) > 90 else ""))
+            ok("200 e conteúdo confere com o esperado.")
+            if caso["mostrar"] and isinstance(dados, dict):
+                destaque = ", ".join(
+                    c + "=" + str(dados.get(c)) for c in caso["mostrar"] if c in dados
+                )
+                explicar("  destaque : " + destaque)
         else:
-            aviso(caminho + " -> HTTP " + str(status) + " (200 era o esperado).")
+            aviso("200, mas o conteúdo não confere com o esperado.")
+            o_que_fazer("o banco pode estar vazio ou com outro seed: rode a opção 5.",
+                        "se o número de itens diferir, confira a carga no banco.")
 
+    total = len(CASOS_DE_TESTE)
     print("")
-    print("  resultados: " + str(aprovados) + " de " + str(len(caminhos)) + " endpoints responderam.")
-    if aprovados == len(caminhos):
-        ok("tudo respondendo: o degrau esta verificavel de ponta a ponta.")
+    print("  " + "=" * 62)
+    print("  RESULTADO: " + str(aprovados) + " de " + str(total) + " testes passaram.")
+    print("  " + "=" * 62)
+
+    if aprovados == total:
+        ok("tudo certo: banco respondendo, dados no lugar e API consultando.")
         return True
 
-    erro("nem todos os endpoints responderam.")
-    if ambiente_atual() == "neon":
-        o_que_fazer("suba a API com a opcao 6 (Uvicorn local).",
-                    "se ela ja estiver rodando, veja a janela/processo do Uvicorn;",
-                    "para reiniciar do zero: opcao 9 e depois opcao 6.")
+    if aprovados == 0:
+        erro("nenhum teste passou: a API provavelmente não está no ar.")
+        o_que_fazer("suba com a opção 6 e tente novamente.")
     else:
-        o_que_fazer("veja o log da API: docker compose logs --tail=30 api")
+        erro(str(total - aprovados) + " teste(s) falharam.")
+        if ambiente_atual() == "neon":
+            o_que_fazer("confira se a carga foi feita (opção 5) e se a API está no ar (opção 6).")
+        else:
+            o_que_fazer("veja o log da API: docker compose logs --tail=30 api")
     return False
 
 
@@ -1366,6 +1466,76 @@ def desinstalar(ambiente: str = None) -> None:
         o_que_fazer("confira os volumes com: docker volume ls")
 
 
+def mostrar_comandos_manuais() -> None:
+    """Mostra os comandos exatos de cada passo, para rodar à mão ou copiar.
+
+    Motivo: todo botão do menu esconde um comando. Quem está aprendendo precisa
+    ver o comando por trás — e quem quiser repetir em outra máquina leva a lista
+    pronta, com o efeito e o resultado esperado de cada linha.
+    """
+    ambiente = ambiente_atual()
+    titulo("Comandos manuais — ambiente " + ambiente)
+    explicar(
+        "Os mesmos passos do menu, sem o menu. Cada bloco mostra:",
+        "  comando -> o que ele faz -> o que deve aparecer.",
+    )
+
+    if ambiente == "neon":
+        blocos = [
+            ("pip install -r meu-loop-agente\\workspace\\api\\requirements.txt",
+             "instala FastAPI, Uvicorn, psycopg2 e pydantic-settings",
+             "Successfully installed fastapi-... psycopg2_binary-..."),
+            ("python meu-loop-agente\\workspace\\scripts\\aplicar_sql_nuvem.py",
+             "cria a tabela e carrega os dados no banco da nuvem",
+             "ficticio: 2 / real: 561"),
+            ("cd meu-loop-agente\\workspace\\api",
+             "entra na pasta da API (o Uvicorn precisa rodar daqui)",
+             "o prompt muda para ...\\workspace\\api"),
+            ("python -m uvicorn app.main:app --host 127.0.0.1 --port 8000",
+             "sobe a API (deixe este terminal aberto)",
+             "Uvicorn running on http://127.0.0.1:8000"),
+            ("curl \"http://localhost:8000/health\"",
+             "pergunta à API se ela e o banco estão de pé",
+             "{\"status\":\"ok\",\"postgres\":\"ok\",...,\"origem\":\"nuvem (DATABASE_URL)\"}"),
+            ("curl \"http://localhost:8000/ipca/ultimo\"",
+             "pede o registro mais recente",
+             "{\"data\":\"2099-02-01\",\"valor\":2.3456,\"tipo\":\"ficticio\"}"),
+            ("curl \"http://localhost:8000/ipca/serie?tipo=real\"",
+             "pede só os meses reais (561 itens)",
+             "lista JSON começando em {\"data\":\"1980-01-01\",...}"),
+        ]
+    else:
+        blocos = [
+            ("docker compose up -d --build",
+             "constrói a imagem e sobe banco + API",
+             "dois containers; depois 'docker compose ps' mostra (healthy)"),
+            ("Get-Content meu-loop-agente\\workspace\\db\\seed.sql | docker compose exec -T postgres psql -U termometro -d termometro",
+             "carrega os dados dentro do container do banco",
+             "INSERT 0 563 e COMMIT"),
+            ("docker compose ps",
+             "confere se os dois containers estão de pé",
+             "termometro-postgres e termometro-api com (healthy)"),
+            ("curl \"http://localhost:8000/health\"",
+             "pergunta à API se ela e o banco estão de pé",
+             "{\"status\":\"ok\",\"postgres\":\"ok\",...}"),
+        ]
+
+    for comando, efeito, esperado in blocos:
+        print("")
+        print("  $ " + comando)
+        explicar("  faz     : " + efeito, "  esperado: " + esperado)
+
+    print("")
+    explicar(
+        "No navegador, as mesmas rotas ficam em:",
+        "  " + URL_API + "/health",
+        "  " + URL_API + "/ipca/ultimo",
+        "  " + URL_API + "/ipca/serie",
+        "  " + URL_API + "/docs        (documentação interativa)",
+    )
+    ok("lista de comandos exibida. Nada foi executado.")
+
+
 # ===========================================================================
 # 15. Menu
 # ===========================================================================
@@ -1380,6 +1550,7 @@ OPCOES = [
     ("7", "Testar os 3 endpoints"),
     ("8", "Instalar tudo na ordem (2 a 7)"),
     ("9", "Desinstalar / parar o ambiente"),
+    ("10", "Mostrar os comandos manuais (copiar e colar)"),
     ("0", "Sair"),
 ]
 
@@ -1409,6 +1580,7 @@ def main() -> int:
         "7": lambda: testar_endpoints(),
         "8": lambda: instalar_tudo(),
         "9": lambda: desinstalar(),
+        "10": lambda: mostrar_comandos_manuais(),
     }
 
     while True:

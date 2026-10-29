@@ -18,6 +18,8 @@ a qualquer momento com o comando da coluna **Como reproduzir**.
 | `13-opcao-8-etapas.png` | opcao 8 (instalar tudo) anuncia as etapas | `python instalar.py` com entrada `8, 0` | `docs/evidencias/13-opcao-8-etapas.txt` |
 | `16-api-no-neon.png` | API local (Uvicorn) apontando para o banco na nuvem | `python instalar.py` com entrada `6` | `docs/evidencias/16-neon-api-endpoints.txt` |
 | `17-endpoints-neon.png` | os 3 endpoints respondendo 200 com dados do Neon | `python instalar.py` com entrada `7` | `docs/evidencias/16-neon-api-endpoints.txt` |
+| `18-testes-com-feedback.png` | cada endpoint com comando, esperado, obtido e veredito (4 de 4) | `python instalar.py` com entrada `7` e depois `0` | `docs/evidencias/17-testes-com-feedback.txt` |
+| `19-swagger.png` | **captura real de tela**: a documentação interativa da API em `/docs`, com os 3 endpoints | abrir `http://localhost:8000/docs` no navegador | — |
 
 ## Por que não há print da tela
 
