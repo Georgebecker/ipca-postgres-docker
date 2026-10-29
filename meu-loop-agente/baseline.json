@@ -1,24 +1,41 @@
 {
   "valor_inicial": 0,
-  "melhor_valor": 0,
+  "melhor_valor": 3,
   "meta_absoluta": 3,
   "meta_percentual": null,
   "progresso": {
-    "iteracao_atual": 1,
-    "aceitos": 1,
+    "iteracao_atual": 3,
+    "aceitos": 3,
     "rejeitados": 0,
     "rejeicoes_consecutivas": 0
   },
   "historico_de_aceites": [
     {
       "iteracao": 1,
-      "hipotese": "Converter a serie 433 do BCB em seed.sql com 563 linhas prontas para carga (561 reais + 2 ficticias de 2099)",
+      "hipotese": "Converter a serie 433 do BCB em seed.sql com 563 linhas prontas para carga",
       "valor": 563.0,
       "variacao_percentual": 0.0,
-      "data": "2026-10-29T17:27:01Z"
+      "data": "2026-10-29T17:27:01Z",
+      "fonte": "medido pelo verificador"
+    },
+    {
+      "iteracao": 2,
+      "hipotese": "Expor 3 endpoints FastAPI lendo a tabela ipca",
+      "valor": 3.0,
+      "variacao_percentual": null,
+      "data": "2026-10-29T17:44:00Z",
+      "fonte": "declarado pelo dono (sem Docker na máquina)"
+    },
+    {
+      "iteracao": 3,
+      "hipotese": "Fechar o Degrau 1 com os 3 endpoints respondendo",
+      "valor": 3.0,
+      "variacao_percentual": 0.0,
+      "data": "2026-10-29T17:44:00Z",
+      "fonte": "declarado pelo dono (sem Docker na máquina)"
     }
   ],
-  "atualizado_em": "2026-10-29T17:27:01Z",
+  "atualizado_em": "2026-10-29T17:44:00Z",
   "estado_inicial": {
     "data": "2026-10-29",
     "banco_existe": false,
@@ -26,7 +43,7 @@
     "api_existe": false,
     "endpoints_funcionando": 0,
     "linhas_prontas_no_seed": 0,
-    "observacao": "Foto do estado antes de qualquer mudanca. Serve para comparar depois."
+    "observacao": "Foto do estado antes de qualquer mudança. Serve para comparar depois."
   },
   "estado_final": {
     "data": "2026-10-29",
@@ -38,6 +55,6 @@
     "registros_no_banco": 563,
     "registros_reais": 561,
     "registros_ficticios": 2,
-    "fonte": "declaracao do dono (29/10/2026); os endpoints nao foram medidos na maquina onde este arquivo foi escrito, porque ela nao tem Docker"
+    "fonte": "declaração do dono (29/10/2026) confirmada para os ciclos 2 e 3; os endpoints não foram medidos pelo verificador nesta máquina porque ela não tem Docker"
   }
 }
