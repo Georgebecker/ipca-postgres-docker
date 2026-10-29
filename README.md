@@ -1,105 +1,100 @@
 # IPCA Postgres Docker
 
-**Aqui vive um agente de Loop Engineering** (DeepSeek Flash): ele melhora sistemas em
-**ciclos contínuos e verificáveis** — lê o objetivo, propõe UMA mudança pequena, testa,
-mede, decide (mantém ou reverte) e registra. Sem intervenção humana a cada passo.
+![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
+![Status](https://img.shields.io/badge/status-rascunho-orange)
 
-Este repositório **é o modelo em si** — o Loop Engineer completo (contrato, regras de ouro,
-ferramentas de verificação e agente), pronto para receber um sistema alvo e rodar ciclos.
+Quero ter os dados públicos do **IPCA** (a inflação oficial medida pelo IBGE) dentro de
+um **PostgreSQL em Docker**, com carga repetível e consultas SQL prontas — sem depender
+de planilha baixada à mão. Hoje o repositório é só o esqueleto: ainda não há ETL,
+schema nem container.
 
----
+## Classificação
 
-**Autor:** George Herman Becker
-**Gestão em Tecnologia da Informação**
+| Campo | Valor |
+|---|---|
+| **Propósito** | Guardar a série do IPCA em PostgreSQL local (Docker) de forma reprodutível, para estudar modelagem, carga e consulta de dados públicos. |
+| **Maturidade** | Rascunho — base criada em 29/10/2026; sem ingestão, schema, `docker-compose` ou testes. |
+| **O que está sendo treinado** | Modelagem relacional, SQL analítico, Docker, ingestão e limpeza de dados públicos (IBGE/SIDRA) e Loop Engineering. |
+| **Quem usaria** | Estudantes e analistas que querem um ambiente local de IPCA para praticar SQL e comparar com outras fontes. |
 
+## Metodologia Loop
 
-**Apoie o autor:**
+Este projeto não foi feito no "achismo": ele nasce do modelo
+[`projeto_loop`](https://github.com/Georgebecker/projeto_loop) e segue **Loop Engineering**
+— hipótese, uma mudança pequena, teste, métrica real e decisão **ACEITO/REJEITADO**.
+
+O contrato vive em `meu-loop-agente/` (`program.md`, `config_loop.json`,
+`baseline.json` e `verificar_iteracao.py`), e cada ciclo é registrado em
+[`meu-loop-agente/log.md`](meu-loop-agente/log.md). O agente só altera
+`meu-loop-agente/workspace/`; regras e configuração são do humano.
+
+## O que tem aqui
+
+- `docs/REGRAS_DE_OURO.md` — regras de postura, processo e técnica do projeto.
+- `meu-loop-agente/` — contrato do loop, verificador, linha de base e log.
+- `.github/agents/deepseek-flash.agent.md` — agente **DeepSeek Flash** com as regras deste
+  repositório; selecione-o no seletor de agentes do Chat.
+- `.env` / `.env.example` — configuração local (o `.env` nunca vai ao git).
+- `.githooks/` — bloqueiam `.env` e segredo no commit **e** no push.
+- `data/raw`, `data/processed`, `data/descartados` e `notebooks` — pastas vazias (só `.gitkeep`).
+
+```
+ipca-postgres-docker/
+├── .env / .env.example
+├── .githooks/
+├── .github/agents/deepseek-flash.agent.md
+├── docs/REGRAS_DE_OURO.md
+├── meu-loop-agente/          # contrato, verificador, log, workspace/
+├── data/{raw,processed,descartados}/
+├── notebooks/
+├── README.md
+└── requirements.txt
+```
+
+## Como rodar
+
+O verificador usa **somente a biblioteca padrão** do Python — não há dependência para
+instalar ainda.
+
+```powershell
+python --version                          # testado com 3.14.6 (mínimo 3.8)
+python meu-loop-agente\verificar_iteracao.py estado
+```
+
+Para abrir o projeto no VS Code:
+
+```powershell
+code --new-window D:\Projetos\ipca-postgres-docker
+```
+
+## 🚀 Convite à interação
+
+- **Iniciantes:** o primeiro PR pode ser pequeno — melhorar uma mensagem de erro, escrever
+  um teste ou ajustar esta documentação. Eu reviso e explico o que mudou.
+- **Colegas de programação:** abra uma Issue ou PR se encontrar gargalo, brecha de
+  segurança ou uma modelagem melhor para a série do IPCA.
+- **Recrutadores e visitantes:** é projeto real, construído em ciclos, com o log em
+  [`meu-loop-agente/log.md`](meu-loop-agente/log.md) — não é tutorial copiado.
+
+## Transparência e limitações
+
+- **Sem Docker ainda:** o `docker-compose` do PostgreSQL é o primeiro ciclo pendente; o
+  Docker não está instalado na máquina onde a base foi criada, então nada foi testado.
+- **Sem dados e sem schema:** nenhuma série do IPCA foi baixada, limpa ou carregada.
+- **Contrato do loop no exemplo da base:** `program.md` e `config_loop.json` ainda falam
+  do exemplo Next.js (métrica de bundle) e precisam da métrica real do projeto.
+- **`.env` herdado da base:** o arquivo local aponta `DB_URL` para SQLite; a troca para
+  PostgreSQL é decisão do dono do projeto.
+
+## Apoie o autor
+
 - **PIX:** `a8b68e14-edfe-4450-88f2-c2af4aca2a6c`
 - **Buy Me a Coffee:** <https://buymeacoffee.com/georgehbecker>
 - **LinkedIn:** <https://www.linkedin.com/in/georgehbecker/>
 
----
+## Topics sugeridos
 
-## Loop Engineering — o coração do projeto
-
-Um agente opera em ciclos: lê o contrato (`program.md`), propõe **UMA** hipótese pequena,
-aplica a mudança, roda a verificação, **mede a métrica principal** e decide —
-**ACEITO** (mantém e atualiza a linha de base) ou **REJEITADO** (reverte na hora) —
-registrando tudo no log. O ciclo repete até a meta, dentro de limites definidos.
-
-**Um ciclo de verdade, do começo ao fim (exemplo):**
-
+```text
+python sql postgresql docker ibge ipca dados-publicos loop-engineering
 ```
-Iteração 1
-- Hipótese: trocar a biblioteca moment.js por date-fns
-- Arquivos: workspace/lib/date.ts, workspace/package.json
-- Métrica antes: 312 kB  →  depois: 298 kB  (melhoria de 4,49%)
-- Comandos de verificação: todos passaram
-- Decisão: ACEITO — a linha de base vira 298 kB; o próximo ciclo parte daqui
-
-Iteração 2
-- Hipótese: remover um import não utilizado de lodash
-- Métrica antes: 298 kB  →  depois: 298 kB  (não melhorou)
-- Decisão: REJEITADO — a mudança é revertida e nada entra na linha de base
-```
-
-**As vantagens na prática:**
-
-- **Melhoria medida, não "achada":** cada iteração tem número antes/depois; o que não melhora é revertido.
-- **Zero regressão silenciosa:** a linha de base só avança quando a métrica melhora de verdade.
-- **Rede de segurança total:** hipótese pequena + ponto de retorno antes de cada ciclo — reverter é um comando só.
-- **Decisão objetiva:** critérios de aceite/rejeição escritos no contrato — não é opinião nem promessa da IA.
-- **Conhecimento que não se perde:** o `log.md` guarda cada tentativa (hipótese, arquivos, métricas, decisão).
-- **Autonomia sem risco:** o agente só mexe no que o contrato permite (dentro de `workspace/`); o resto é proibido e bloqueado.
-- **Ganho acumulado:** melhorias aceitas se somam — o avanço compõe a cada ciclo.
-- **Custo controlado:** limites de parada (meta, iterações, rejeições seguidas) e temperatura baixa (consistência).
-- **Um contrato, dois "cérebros":** funciona hoje com o agente do chat e amanhã com o runner autônomo (API DeepSeek).
-
-**Onde está:** `meu-loop-agente/` — contrato (`program.md`), configuração de máquina
-(`config_loop.json`), linha de base (`baseline.json`), log (`log.md`), comportamento do
-agente (`system_prompt.md`) e o verificador (`verificar_iteracao.py`).
-Guia de uso: [`meu-loop-agente/README.md`](meu-loop-agente/README.md).
-
----
-
-## O que tem aqui (por enquanto)
-
-- `docs/REGRAS_DE_OURO.md` — as melhores regras, sintetizadas, para todo projeto de dados (Python + SQL + arquitetura moderna).
-- `meu-loop-agente/` — **o coração do projeto:** o agente de Loop Engineering (contrato, métrica, log e verificador para ciclos de melhoria contínua; ele só mexe em `meu-loop-agente/workspace/`).
-- `.env` / `.env.example` — configuração pronta (caminhos, banco de dados, APIs), sem segredo no repositório.
-- `.githooks/` — ganchos de proteção do git: bloqueiam o `.env` no commit **e** no envio ao remoto (ativar em um clone novo: `git config core.hooksPath .githooks` ou `.githooks\instalar.ps1`).
-- Pastas-base prontas para crescer: `data/raw`, `data/processed`, `data/descartados`, `notebooks`.
-
-## Estrutura prevista (vai evoluir com o projeto)
-
-```
-ipca-postgres-docker/
-├── .env / .env.example        # configuração (nunca commitar o .env)
-├── .githooks/                 # ganchos de proteção (bloqueiam .env no commit e no envio)
-├── README.md                  # este arquivo
-├── docs/                      # documentação e regras de ouro
-├── meu-loop-agente/           # agente de Loop Engineering (contrato, log, workspace, verificador)
-├── data/
-│   ├── raw/                   # dados brutos (nunca alterar)
-│   ├── processed/             # dados tratados/limpos
-│   └── descartados/           # fora de circulação (nunca apagar)
-├── notebooks/                 # análises exploratórias (.ipynb)
-├── src/                       # código reutilizável (cresce depois)
-└── sql/                       # consultas e schemas SQL (cresce depois)
-```
-
-## Requisitos
-
-- **Python 3.8+** — o verificador do agente usa somente a biblioteca padrão (sem dependências externas por enquanto; veja `requirements.txt`).
-- **Git** — com os ganchos de proteção ativos (`git config core.hooksPath .githooks`).
-- **Node.js** — opcional; necessário apenas se o projeto alvo for o exemplo Next.js do `program.md`.
-
-## Comece por aqui
-
-1. Leia [`docs/REGRAS_DE_OURO.md`](docs/REGRAS_DE_OURO.md) — é o contrato do projeto (a **Parte IV** é o guia do agente de Loop Engineering).
-2. Para operar o agente: leia [`meu-loop-agente/README.md`](meu-loop-agente/README.md) — contrato, comandos e como rodar um ciclo.
-3. O `.env` já está criado neste projeto (e nunca vai ao git); em um clone novo, copie `.env.example` para `.env` e ajuste os valores (caminhos, banco, chaves).
-4. Use `data/raw` para o que vier bruto e `data/processed` só para o que for tratado e validado.
-5. Nunca apague dado: se não servir mais, mova para uma pasta de descarte (ex.: `data/descartados/`).
-
----
