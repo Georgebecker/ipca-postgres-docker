@@ -1,11 +1,11 @@
 {
   "valor_inicial": 0,
-  "melhor_valor": 3,
+  "melhor_valor": 3.0,
   "meta_absoluta": 3,
   "meta_percentual": null,
   "progresso": {
-    "iteracao_atual": 3,
-    "aceitos": 3,
+    "iteracao_atual": 8,
+    "aceitos": 8,
     "rejeitados": 0,
     "rejeicoes_consecutivas": 0
   },
@@ -33,9 +33,17 @@
       "variacao_percentual": 0.0,
       "data": "2026-10-29T17:44:00Z",
       "fonte": "declarado pelo dono (sem Docker na máquina)"
+    },
+    {
+      "iteracao": 8,
+      "hipotese": "Adaptar API e scripts para o banco na nuvem (Neon) sem perder o modo Docker",
+      "valor": 3.0,
+      "variacao_percentual": 0.0,
+      "data": "2026-10-29T19:49:32Z",
+      "fonte": "medido pelo verificador (3 endpoints respondendo)"
     }
   ],
-  "atualizado_em": "2026-10-29T17:44:00Z",
+  "atualizado_em": "2026-10-29T19:49:32Z",
   "estado_inicial": {
     "data": "2026-10-29",
     "banco_existe": false,

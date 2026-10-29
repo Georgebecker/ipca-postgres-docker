@@ -170,6 +170,52 @@ curl "http://localhost:8000/ipca/serie?tipo=real"
 python meu-loop-agente\verificar_iteracao.py estado
 ```
 
+### Rodar a API sem Docker (banco na nuvem)
+
+Quando o Docker não está disponível, o banco pode ficar no **Neon** (PostgreSQL
+gerenciado, plano gratuito) e a API continua rodando na sua máquina.
+
+**1. Tenha a URL de conexão no `.env`.** O comando `neon init` grava a variável sozinho;
+se preferir, cole a connection string do console do Neon:
+
+```
+DATABASE_URL=postgresql://usuario:senha@host/banco?sslmode=require
+AMBIENTE=neon
+```
+
+**2. Instale as dependências da API** (uma vez):
+
+```powershell
+pip install -r meu-loop-agente\workspace\api\requirements.txt
+```
+
+**3. Crie a tabela e carregue os dados no banco da nuvem:**
+
+```powershell
+python meu-loop-agente\workspace\scripts\aplicar_sql_nuvem.py
+```
+
+O script lê `init.sql` e `seed.sql` e envia pela `DATABASE_URL`. Ele usa a biblioteca
+`psycopg2`; se ela não estiver instalada, cai no CLI do Neon (`neon psql`).
+
+**4. Suba a API:**
+
+```powershell
+cd meu-loop-agente\workspace\api
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+**5. Teste:**
+
+```powershell
+curl http://localhost:8000/health
+```
+
+A resposta traz `"origem": "nuvem (DATABASE_URL)"`, provando de onde vêm os dados.
+
+> O `instalar.py` faz esses quatro passos sozinho: escolha a opção `3` (ambiente **Neon**)
+> e depois a `8` (instalar tudo).
+
 ## Endpoints
 
 Base: `http://localhost:8000` (ou a porta definida em `API_PORT` no `.env`).

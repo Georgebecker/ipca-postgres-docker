@@ -16,6 +16,8 @@ a qualquer momento com o comando da coluna **Como reproduzir**.
 | `11-opcao-invalida.png` | resposta invalida no menu | `python instalar.py` com entrada `x, 0` | `docs/evidencias/11-opcao-invalida.txt` |
 | `12-sem-docker-condicionante.png` | condicionante do Docker (opcao 4) | `python instalar.py` com entrada `4, 0` | `docs/evidencias/12-sem-docker-condicionante.txt` |
 | `13-opcao-8-etapas.png` | opcao 8 (instalar tudo) anuncia as etapas | `python instalar.py` com entrada `8, 0` | `docs/evidencias/13-opcao-8-etapas.txt` |
+| `16-api-no-neon.png` | API local (Uvicorn) apontando para o banco na nuvem | `python instalar.py` com entrada `6` | `docs/evidencias/16-neon-api-endpoints.txt` |
+| `17-endpoints-neon.png` | os 3 endpoints respondendo 200 com dados do Neon | `python instalar.py` com entrada `7` | `docs/evidencias/16-neon-api-endpoints.txt` |
 
 ## Por que não há print da tela
 

@@ -92,3 +92,16 @@
 - **Data/hora**: 2026-10-29T18:30:00Z
 - **Fonte da medição**: parcialmente medida — os dois cenários rodaram nesta máquina; o caminho com Docker (etapas 4 a 6) segue sem prova aqui
 - **Cuidado tomado**: o teste de `criar_env` rodou numa cópia em diretório temporário, para não sobrescrever o `.env` real do dono (conferido depois: 26 linhas, 694 bytes, inalterado)
+
+## Iteração 8
+- **Hipótese**: Adaptar API e scripts para o banco na nuvem (Neon) sem perder o modo Docker
+- **Arquivos alterados**: instalar.py, meu-loop-agente/workspace/api/app/{config,database,routes}.py, meu-loop-agente/workspace/scripts/aplicar_sql_nuvem.py, README.md, .env.example
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0.00%
+- **Comandos passaram**: Sim
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T19:49:32Z
+- **Fonte da medição**: MEDIDA — a API subiu localmente apontando para o Neon e os 3 endpoints responderam 200 (`endpoints ok: 3`), não é declaração
+- **Justificativa do aceite**: o verificador sugeriu REJEITADO porque a métrica não mudou (3 → 3); a decisão do dono foi ACEITO porque o objetivo é adaptar o ambiente, não melhorar a métrica — e pela primeira vez a medição foi real, não declarada
+

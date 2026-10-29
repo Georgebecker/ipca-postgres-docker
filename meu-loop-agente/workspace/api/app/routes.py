@@ -16,7 +16,7 @@ import psycopg2
 from fastapi import APIRouter, HTTPException, Query
 
 from . import models
-from .database import conexao
+from .database import conexao, descrever_origem
 
 router = APIRouter()
 
@@ -41,7 +41,14 @@ def health() -> dict:
 
     # A versão completa termina com detalhes do sistema operacional; o primeiro
     # trecho ("PostgreSQL 16.x ...") já responde o que interessa.
-    return {"status": "ok", "postgres": "ok", "versao_postgres": versao.split(" on ")[0]}
+    return {
+        "status": "ok",
+        "postgres": "ok",
+        "versao_postgres": versao.split(" on ")[0],
+        # Diz se a resposta veio do banco na nuvem ou do banco local. Sem isso,
+        # comparar resultados de dois ambientes vira adivinhação.
+        "origem": descrever_origem(),
+    }
 
 
 @router.get("/ipca/ultimo")

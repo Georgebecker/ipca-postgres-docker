@@ -1,0 +1,2 @@
+$ python -m py_compile scripts/baixar_dados.py scripts/gerar_seed.py scripts/medir_endpoints.py api/app/config.py api/app/database.py api/app/models.py api/app/routes.py api/app/main.py
+

@@ -1,0 +1,9 @@
+$ python scripts/medir_endpoints.py
+
+[info] medindo a API em http://localhost:8000
+  [ok]   GET /health -> 200 e JSON valido
+  [ok]   GET /ipca/ultimo -> 200 e JSON valido
+  [ok]   GET /ipca/serie -> 200 e JSON valido
+
+endpoints ok   : 3
+endpoints total: 3

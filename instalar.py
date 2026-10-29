@@ -55,18 +55,32 @@ SCRIPT_BAIXAR = RAIZ / "meu-loop-agente" / "workspace" / "scripts" / "baixar_dad
 SCRIPT_GERAR_SEED = RAIZ / "meu-loop-agente" / "workspace" / "scripts" / "gerar_seed.py"
 ARQ_COMPOSE = RAIZ / "docker-compose.yml"
 ARQ_COMPOSE_MYSQL = RAIZ / "docker-compose.mysql.yml"
+SCRIPT_APLICAR_NUVEM = RAIZ / "meu-loop-agente" / "workspace" / "scripts" / "aplicar_sql_nuvem.py"
+DIR_API = RAIZ / "meu-loop-agente" / "workspace" / "api"
+# O numero do processo (PID) da API local fica na raiz, em um arquivo proprio.
+# Detalhe aprendido na pratica: NAO usar ".neon/api.pid" — o CLI do Neon cria
+# ".neon" como ARQUIVO de configuracao, e tentar criar um arquivo "dentro" dele
+# falha com FileExistsError.
+ARQ_PID_API = RAIZ / ".api.pid"
 
 URL_API = "http://localhost:8000"
+PORTA_API_PADRAO = 8000
 CONTAINER_POSTGRES = "termometro-postgres"
 CONTAINER_MYSQL = "termometro-mysql"
 
 # Tempo maximo esperando o banco ficar "healthy" (pronto para receber conexao).
 LIMITE_ESPERA_SEGUNDOS = 60
+# Tempo maximo esperando a API local comecar a responder.
+LIMITE_ESPERA_API_SEGUNDOS = 30
 
 # Chaves que precisam existir no .env para o PostgreSQL funcionar.
 CHAVES_POSTGRES = ("POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
 # Chaves que precisam existir no .env para o MySQL funcionar.
 CHAVES_MYSQL = ("MYSQL_ROOT_PASSWORD", "MYSQL_DATABASE")
+
+# Os dois ambientes que o projeto aceita. A escolha fica no .env, na chave
+# AMBIENTE, para que o comportamento nao dependa de adivinhacao.
+AMBIENTES = {"docker": "PostgreSQL em Docker (local)", "neon": "PostgreSQL na nuvem (Neon)"}
 
 
 # ===========================================================================
@@ -257,6 +271,50 @@ def exigir_env(motivo: str) -> bool:
     return True
 
 
+def exigir_database_url(motivo: str) -> bool:
+    """Condicionante do modo nuvem: existe DATABASE_URL no .env?
+
+    No Neon não existe host, porta e usuário separados para conferir: existe uma
+    linha só, com tudo dentro. Sem ela, não há como o script aplicar SQL nem a
+    API conectar.
+    """
+    url = ler_env().get("DATABASE_URL", "").strip()
+    if url:
+        return True
+    erro("nao encontrei DATABASE_URL no .env.")
+    explicar("  Motivo: " + motivo + ".",
+             "  E nela que ficam host, porta, usuario, senha e nome do banco do Neon.")
+    o_que_fazer("rode: neon init   (ele cria o projeto e grava a variavel)",
+                "ou copie a connection string no console do Neon e cole no .env.")
+    return False
+
+
+def neon_cli_disponivel() -> bool:
+    """Diz se o CLI do Neon esta instalado (usado para login e para conferir)."""
+    return shutil.which("neon") is not None
+
+
+def comando_neon(*argumentos: str) -> list:
+    """Monta o comando do CLI do Neon de um jeito que funcione no Windows.
+
+    Por que isso existe: no Windows, o executavel instalado pelo npm e um arquivo
+    .CMD, e o subprocess nao consegue executa-lo diretamente (so .exe). Passando
+    pelo cmd.exe, funciona. No Linux/macOS, o comando vai direto.
+    """
+    if platform.system() == "Windows":
+        return ["cmd", "/c", "neon"] + list(argumentos)
+    return ["neon"] + list(argumentos)
+
+
+def biblioteca_psycopg2_disponivel() -> bool:
+    """Diz se a psycopg2 esta instalada (o script prefere ela para falar com o banco)."""
+    try:
+        import psycopg2  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 # ===========================================================================
 # 4. Execucao de comandos
 # ===========================================================================
@@ -313,6 +371,9 @@ def ler_env() -> dict:
 
     Linhas comecando com '#' e linhas vazias sao ignoradas. Se o arquivo nao
     existe, devolve dicionario vazio (quem chama decide o que fazer).
+
+    Aspas envolventes sao removidas: o `neon init` grava
+    DATABASE_URL="postgresql://..." e as aspas NAO fazem parte do valor.
     """
     dados = {}
     if not ARQ_ENV.exists():
@@ -322,7 +383,10 @@ def ler_env() -> dict:
         if not linha or linha.startswith("#") or "=" not in linha:
             continue
         chave, valor = linha.split("=", 1)
-        dados[chave.strip()] = valor.strip()
+        valor = valor.strip()
+        if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in ('"', "'"):
+            valor = valor[1:-1]
+        dados[chave.strip()] = valor
     return dados
 
 
@@ -350,6 +414,76 @@ def banco_atual() -> str:
     return ler_env().get("BANCO", "postgres").lower()
 
 
+def ambiente_atual() -> str:
+    """Diz qual ambiente esta configurado: 'docker' (local) ou 'neon' (nuvem).
+
+    Ordem de decisao, do mais explicito para o mais implicito:
+    1. a chave AMBIENTE no .env, se existir (escolha consciente do dono);
+    2. a presenca de DATABASE_URL, que e o que o Neon entrega;
+    3. 'docker', como padrao historico do projeto.
+
+    Por que nao decidir so pela DATABASE_URL: o .env pode ter as duas coisas
+    (banco local e nuvem), e a presenca de uma URL nao diz qual voce quer usar
+    agora. A chave AMBIENTE diz.
+    """
+    dados = ler_env()
+    escolhido = (dados.get("AMBIENTE") or "").strip().lower()
+    if escolhido in AMBIENTES:
+        return escolhido
+    if dados.get("DATABASE_URL"):
+        return "neon"
+    return "docker"
+
+
+def escolher_ambiente() -> str:
+    """Pergunta onde o banco vai viver e grava a escolha no `.env`. Devolve o nome.
+
+    Por que perguntar em vez de adivinhar: o .env pode ter as duas configuracoes
+    (a local e a da nuvem). Sem uma escolha explicita, o instalador faria algo
+    diferente do que voce espera — e a culpa pareceria do programa.
+    """
+    titulo("Escolha do ambiente")
+    explicar(
+        "Motivo: o projeto funciona nos dois lugares, e o passo a passo muda:",
+        "",
+        "1) Docker local — PostgreSQL dentro de um container na sua maquina:",
+        "   - treina container, volume e healthcheck (o objetivo original do degrau);",
+        "   - exige o Docker Desktop instalado e funcionando.",
+        "",
+        "2) Neon (nuvem) — PostgreSQL gerenciado, plano gratuito:",
+        "   - nenhuma instalacao de banco; funciona por uma URL de conexao;",
+        "   - exige internet e a variavel DATABASE_URL no .env;",
+        "   - nao exercita Docker.",
+        "",
+        "Ambiente configurado agora: " + ambiente_atual() + ".",
+    )
+
+    escolha = perguntar_opcao("Qual ambiente? 1 = Docker local, 2 = Neon", ("1", "2"),
+                              "1" if ambiente_atual() == "docker" else "2")
+    ambiente = "docker" if escolha == "1" else "neon"
+    definir_no_env("AMBIENTE", ambiente)
+    ok("ambiente escolhido: " + ambiente + " (gravado no .env como AMBIENTE)")
+
+    if ambiente == "neon":
+        aviso("o modo nuvem nao usa Docker.")
+        o_que_fazer("garanta DATABASE_URL no .env (o comando 'neon init' grava).",
+                    "a API vai rodar na sua maquina, em Python, falando com o banco na nuvem.")
+        return ambiente
+
+    # No modo Docker ainda existe a escolha do banco (PostgreSQL ou MySQL).
+    explicar(
+        "",
+        "Agora o banco do container:",
+        "  1) PostgreSQL — padrao do projeto, com tudo pronto;",
+        "  2) MySQL — extra opcional para comparar os dois dialetos de SQL.",
+    )
+    escolha_banco = perguntar_opcao("Qual banco? 1 = PostgreSQL, 2 = MySQL", ("1", "2"), "1")
+    banco = "mysql" if escolha_banco == "2" else "postgres"
+    definir_no_env("BANCO", banco)
+    ok("banco do container: " + banco)
+    return ambiente
+
+
 def comando_compose(banco: str) -> list:
     """Monta o comando do Docker Compose certo para o banco escolhido."""
     if banco == "mysql":
@@ -361,22 +495,25 @@ def comando_compose(banco: str) -> list:
 # 6. Opcao 1 — verificar pre-requisitos
 # ===========================================================================
 
-def verificar_pre_requisitos() -> bool:
-    """Confere Python, Docker e Docker Compose. Devolve True se tudo existe."""
-    titulo("Verificacao dos pre-requisitos")
+def verificar_pre_requisitos(ambiente: str = None) -> bool:
+    """Confere o que o ambiente escolhido exige. Devolve True se tudo existe.
+
+    Cada ambiente tem exigencias diferentes, e o instalador diz qual esta
+    conferindo:
+    - Docker local: Docker instalado, Compose respondendo e as pecas do .env;
+    - Neon: DATABASE_URL no .env e uma forma de falar com o banco (psycopg2 ou
+      o CLI do Neon).
+    """
+    ambiente = ambiente or ambiente_atual()
+    titulo("Verificacao dos pre-requisitos — " + AMBIENTES[ambiente])
     explicar(
         "Motivo: instalar sem conferir a base e a receita para um erro confuso",
-        "mais adiante ('o container nao sobe' sem dizer por que).",
-        "",
-        "Vou conferir tres coisas:",
-        "  1) a versao do Python (o projeto precisa de 3.8 ou mais novo);",
-        "  2) se o Docker esta instalado (ele roda o banco e a API);",
-        "  3) se o comando 'docker compose' responde (e ele que le o .yml).",
+        "mais adiante ('nao conecta' sem dizer por que).",
     )
 
     problemas = 0
 
-    # Condicionante 1: versao do Python.
+    # Condicionante comum aos dois ambientes: versao do Python.
     versao = sys.version_info
     if versao >= (3, 8):
         ok("Python " + platform.python_version() + " (minimo 3.8)")
@@ -385,35 +522,67 @@ def verificar_pre_requisitos() -> bool:
         o_que_fazer("instale Python 3.8 ou mais novo em https://python.org")
         problemas += 1
 
-    # Condicionante 2: Docker presente.
-    if docker_existe():
-        ok("Docker encontrado")
-    else:
-        erro("o comando 'docker' nao foi encontrado.")
-        instrucoes_de_instalacao_do_docker()
-        problemas += 1
-        # Sem Docker nao adianta testar o compose: o erro seria repetido.
-        print("")
-        erro("verificacao interrompida: " + str(problemas) + " problema(s) encontrado(s).")
-        o_que_fazer("resolva o item acima e rode a verificacao de novo.")
-        return False
+    if ambiente == "neon":
+        # Condicionante 1 do Neon: a URL de conexao.
+        if exigir_database_url("sem ela a API e os scripts nao sabem onde esta o banco"):
+            ok("DATABASE_URL encontrada no .env")
 
-    # Condicionante 3: Docker Compose responde.
-    certo, _ = rodar(["docker", "compose", "version"],
-                     "conferir se o Docker Compose responde",
-                     dica_se_falhar="abra o Docker Desktop e espere o icone ficar verde.")
-    if certo:
-        ok("Docker Compose responde")
+        # Condicionante 2 do Neon: alguma forma de falar com o banco.
+        if biblioteca_psycopg2_disponivel():
+            ok("biblioteca psycopg2 disponivel (caminho preferido)")
+        elif neon_cli_disponivel():
+            aviso("psycopg2 nao instalada; vou usar o CLI do Neon como alternativa.")
+            o_que_fazer("para instalar: pip install psycopg2-binary")
+        else:
+            erro("nem psycopg2 nem o CLI do Neon estao disponiveis.")
+            o_que_fazer("instale uma das duas opcoes:",
+                        "  pip install psycopg2-binary",
+                        "  npm i -g neon")
+            problemas += 1
+
+        # O CLI e opcional no Neon: se existir, confere se a sessao esta ativa.
+        if neon_cli_disponivel():
+            certo, _ = rodar(comando_neon("me"),
+                             "conferir se o CLI do Neon esta autenticado",
+                             dica_se_falhar="rode: neon login")
+            if certo:
+                ok("CLI do Neon autenticado")
+            else:
+                aviso("o CLI do Neon nao esta autenticado (nao impede o modo nuvem).")
+                o_que_fazer("para usar os comandos do Neon: neon login")
     else:
-        erro("o 'docker compose' nao respondeu.")
-        explicar("  Motivo: o Docker Desktop pode estar iniciando, ou a versao e antiga.")
-        o_que_fazer("espere o Docker Desktop ficar verde e rode de novo.",
-                    "se persistir, atualize o Docker.")
-        problemas += 1
+        # Modo Docker: as condicionantes de sempre.
+        if docker_existe():
+            ok("Docker encontrado")
+        else:
+            erro("o comando 'docker' nao foi encontrado.")
+            instrucoes_de_instalacao_do_docker()
+            problemas += 1
+            # Sem Docker nao adianta testar o compose: o erro seria repetido.
+            print("")
+            erro("verificacao interrompida: " + str(problemas) + " problema(s) encontrado(s).")
+            o_que_fazer("resolva o item acima e rode a verificacao de novo.",
+                        "se preferir seguir sem Docker, use a opcao 3 (ambiente Neon).")
+            return False
+
+        certo, _ = rodar(["docker", "compose", "version"],
+                         "conferir se o Docker Compose responde",
+                         dica_se_falhar="abra o Docker Desktop e espere o icone ficar verde.")
+        if certo:
+            ok("Docker Compose responde")
+        else:
+            erro("o 'docker compose' nao respondeu.")
+            explicar("  Motivo: o Docker Desktop pode estar iniciando, ou a versao e antiga.")
+            o_que_fazer("espere o Docker Desktop ficar verde e rode de novo.",
+                        "se persistir, atualize o Docker.")
+            problemas += 1
+
+        if not exigir_env("o container precisa de usuario, senha e nome do banco"):
+            problemas += 1
 
     print("")
     if problemas == 0:
-        ok("tudo certo: Python, Docker e Compose prontos para a instalacao.")
+        ok("tudo certo para o ambiente " + ambiente + ".")
         return True
     erro(str(problemas) + " problema(s) encontrado(s).")
     o_que_fazer("resolva os itens marcados com [erro] e rode de novo.")
@@ -588,6 +757,74 @@ def subir_banco(banco: str = None) -> bool:
     return True
 
 
+def preparar_banco_neon() -> bool:
+    """No modo nuvem nao ha container para subir: confere a conexao e pronto.
+
+    Motivo de existir mesmo assim: o menu precisa de um passo previsivel no
+    mesmo lugar. Aqui ele faz o equivalente ao "subir o banco" — so que, em vez
+    de iniciar algo, prova que o banco da nuvem responde.
+    """
+    titulo("Preparando o banco na nuvem (Neon)")
+    explicar(
+        "Motivo: no Neon nao existe container local para iniciar. O banco ja esta",
+        "no ar do outro lado; o que precisa ser provado e que a URL do .env conecta.",
+        "",
+        "Vou abrir uma conexao e perguntar a versao do PostgreSQL. Se responder,",
+        "o caminho ate o banco esta livre.",
+    )
+
+    if not exigir_database_url("e ela que aponta para o banco na nuvem"):
+        return False
+
+    url = ler_env().get("DATABASE_URL", "").strip()
+    if "sslmode=" not in url:
+        url = url + ("&" if "?" in url else "?") + "sslmode=require"
+
+    if biblioteca_psycopg2_disponivel():
+        import psycopg2
+
+        print("")
+        print("  # conectar ao banco da nuvem e perguntar a versao")
+        try:
+            with psycopg2.connect(url) as conexao:
+                with conexao.cursor() as cursor:
+                    cursor.execute("SELECT version();")
+                    versao = cursor.fetchone()[0]
+        except psycopg2.Error as falha:
+            erro("nao consegui conectar no banco da nuvem.")
+            print("         " + str(falha).strip().splitlines()[0])
+            o_que_fazer("confira a DATABASE_URL no .env (senha e host precisam estar certos).",
+                        "se o projeto foi apagado no console do Neon, crie outro com 'neon init'.")
+            return False
+        ok("conectado: " + versao.split(" on ")[0])
+        return True
+
+    # Alternativa sem psycopg2: usa o CLI do Neon, que ja guardou as credenciais.
+    if not neon_cli_disponivel():
+        erro("sem psycopg2 e sem o CLI do Neon, nao ha como falar com o banco.")
+        o_que_fazer("pip install psycopg2-binary   ou   npm i -g neon")
+        return False
+
+    certo, _ = rodar(
+        comando_neon("projects", "list"),
+        "conferir se o CLI do Neon responde (conexao com a nuvem)",
+        dica_se_falhar="rode: neon login",
+    )
+    if not certo:
+        erro("o CLI do Neon nao respondeu.")
+        return False
+    ok("CLI do Neon respondeu; o banco da nuvem esta acessivel.")
+    return True
+
+
+def preparar_banco(ambiente: str = None) -> bool:
+    """Despacha o passo 4 para o ambiente escolhido."""
+    ambiente = ambiente or ambiente_atual()
+    if ambiente == "neon":
+        return preparar_banco_neon()
+    return subir_banco()
+
+
 # ===========================================================================
 # 10. Opcao 5 — estrutura + seed
 # ===========================================================================
@@ -631,8 +868,35 @@ def aplicar_sql(banco: str, arquivo: Path, motivo: str) -> bool:
     return True
 
 
-def carregar_dados(banco: str = None) -> bool:
-    """Aplica a estrutura (init) e depois o seed."""
+def carregar_dados(ambiente: str = None, banco: str = None) -> bool:
+    """Aplica a estrutura (init) e depois o seed — no ambiente escolhido.
+
+    Docker: envia o SQL por `psql` dentro do container.
+    Neon:   chama o script `aplicar_sql_nuvem.py`, que usa a DATABASE_URL.
+    """
+    ambiente = ambiente or ambiente_atual()
+    if ambiente == "neon":
+        titulo("Criando a tabela e carregando os dados (nuvem)")
+        explicar(
+            "Motivo: mesma necessidade do modo Docker — sem tabela e sem dados, a",
+            "API nao tem o que responder.",
+            "",
+            "Como funciona: o script aplicar_sql_nuvem.py le o init.sql e o seed.sql e",
+            "envia pela DATABASE_URL. Nao ha container nem psql para usar.",
+        )
+        if not exigir_database_url("o script precisa saber em qual banco escrever"):
+            return False
+        certo, _ = rodar(
+            [sys.executable, str(SCRIPT_APLICAR_NUVEM)],
+            "aplicar init.sql e seed.sql no banco da nuvem",
+            dica_se_falhar="veja o erro do script acima; ele indica qual passo falhou.",
+        )
+        if not certo:
+            erro("a carga no banco da nuvem NAO terminou.")
+            return False
+        ok("estrutura e dados aplicados no banco da nuvem.")
+        return True
+
     banco = banco or banco_atual()
     titulo("Criando a tabela e carregando os dados")
     explicar(
@@ -687,8 +951,118 @@ def carregar_dados(banco: str = None) -> bool:
 # 11. Opcao 6 — subir a API
 # ===========================================================================
 
-def subir_api() -> bool:
-    """Constroi e sobe o container da API (somente com PostgreSQL)."""
+def api_esta_no_ar() -> bool:
+    """Diz se a API ja responde em /health (usado antes de subir de novo)."""
+    try:
+        with urllib.request.urlopen(URL_API + "/health", timeout=3) as resposta:
+            return resposta.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+def iniciar_api_local() -> bool:
+    """Sobe a API com Uvicorn na sua maquina, apontando para o banco da nuvem.
+
+    Por que Uvicorn direto e nao container: no modo Neon nao ha Docker. A API e
+    um programa Python comum; o Uvicorn e o servidor que a deixa acessivel.
+
+    O processo fica em segundo plano e o numero dele (PID) e gravado em
+    `.neon/api.pid`, para a opcao 9 conseguir parar depois. Sem esse arquivo,
+    sobraria um servidor rodando sem ninguem saber como encerrar.
+    """
+    titulo("Subindo a API localmente (sem Docker)")
+    explicar(
+        "Motivo: a API continua rodando na sua maquina; so o BANCO esta na nuvem.",
+        "O Uvicorn e o servidor que publica a API em " + URL_API + ".",
+    )
+
+    if not exigir_database_url("a API le o banco pela DATABASE_URL"):
+        return False
+
+    if api_esta_no_ar():
+        ok("a API ja esta respondendo em " + URL_API + " — nao vou subir outra.")
+        return True
+
+    if not exigir_arquivo(DIR_API / "app" / "main.py", "e o ponto de entrada da aplicacao"):
+        return False
+
+    comando = [sys.executable, "-m", "uvicorn", "app.main:app",
+               "--host", "127.0.0.1", "--port", str(PORTA_API_PADRAO)]
+    print("")
+    print("  # iniciar a API em segundo plano")
+    print("  $ " + " ".join(comando))
+    try:
+        processo = subprocess.Popen(
+            comando,
+            cwd=str(DIR_API),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    except OSError as falha:
+        erro("nao consegui iniciar o Uvicorn: " + str(falha))
+        o_que_fazer("confira se fastapi e uvicorn estao instalados:",
+                    "  pip install -r meu-loop-agente/workspace/api/requirements.txt")
+        return False
+
+    ARQ_PID_API.write_text(str(processo.pid), encoding="utf-8")
+
+    print("  # esperando a API responder (ate " + str(LIMITE_ESPERA_API_SEGUNDOS) + "s)")
+    limite = time.time() + LIMITE_ESPERA_API_SEGUNDOS
+    while time.time() < limite:
+        if api_esta_no_ar():
+            ok("API no ar em " + URL_API + " (PID " + str(processo.pid) + ")")
+            o_que_fazer("para parar depois: opcao 9 deste menu.",
+                        "documentacao interativa: " + URL_API + "/docs")
+            return True
+        if processo.poll() is not None:
+            # O processo morreu: provavelmente faltou biblioteca ou o import falhou.
+            saida = b""
+            if processo.stdout is not None:
+                saida = processo.stdout.read() or b""
+            erro("a API encerrou sozinha antes de responder.")
+            for linha in saida.decode("utf-8", "replace").splitlines()[-6:]:
+                print("         " + linha)
+            o_que_fazer("instale as dependencias da API:",
+                        "  pip install -r meu-loop-agente/workspace/api/requirements.txt")
+            return False
+        time.sleep(1)
+
+    erro("a API nao respondeu em " + str(LIMITE_ESPERA_API_SEGUNDOS) + " segundos.")
+    o_que_fazer("veja o processo: PID " + str(processo.pid),
+                "para encerrar: opcao 9 deste menu.")
+    return False
+
+
+def parar_api_local() -> None:
+    """Encerra a API que foi iniciada pela opcao 6 (se ela estiver rodando)."""
+    if not ARQ_PID_API.exists():
+        aviso("nao ha registro de API iniciada por este instalador.")
+        return
+    try:
+        pid = int(ARQ_PID_API.read_text(encoding="utf-8").strip())
+    except ValueError:
+        aviso("o arquivo .neon/api.pid esta invalido; vou apaga-lo.")
+        ARQ_PID_API.unlink(missing_ok=True)
+        return
+
+    if platform.system() == "Windows":
+        comando = ["taskkill", "/PID", str(pid), "/F"]
+    else:
+        comando = ["kill", str(pid)]
+
+    certo, _ = rodar(comando, "encerrar a API local (PID " + str(pid) + ")",
+                     dica_se_falhar="o processo pode ja ter sido encerrado manualmente.")
+    if certo:
+        ok("API local encerrada.")
+    ARQ_PID_API.unlink(missing_ok=True)
+
+
+def subir_api(ambiente: str = None) -> bool:
+    """Sobe a API no ambiente escolhido: container (Docker) ou Uvicorn (Neon)."""
+    ambiente = ambiente or ambiente_atual()
+    if ambiente == "neon":
+        return iniciar_api_local()
+
     titulo("Subindo a API")
 
     # Condicionante: a API depende do PostgreSQL.
@@ -823,23 +1197,22 @@ def instalar_tudo() -> None:
         interromper("2/6", "arquivo .env")
         return
 
-    banco = "postgres"
     print("")
-    print("  ---------------- etapa 3/6: escolher o banco ----------------")
-    banco = escolher_banco()
-    concluidas.append("etapa 3/6: banco escolhido (" + banco + ")")
+    print("  ---------------- etapa 3/6: escolher o ambiente ----------------")
+    ambiente = escolher_ambiente()
+    concluidas.append("etapa 3/6: ambiente escolhido (" + ambiente + ")")
 
-    if not etapa("4/6", "subir o banco", lambda: subir_banco(banco)):
-        interromper("4/6", "subir o banco (" + banco + ")")
+    if not etapa("4/6", "preparar o banco", lambda: preparar_banco(ambiente)):
+        interromper("4/6", "preparar o banco (" + ambiente + ")")
         return
 
-    if not etapa("5/6", "criar a tabela e carregar os dados", lambda: carregar_dados(banco)):
+    if not etapa("5/6", "criar a tabela e carregar os dados", lambda: carregar_dados(ambiente)):
         interromper("5/6", "carga dos dados")
         return
 
-    if banco == "postgres":
+    if ambiente == "neon" or banco_atual() == "postgres":
         if not etapa("6/6", "subir a API e testar os endpoints",
-                     lambda: subir_api() and testar_endpoints()):
+                     lambda: subir_api(ambiente) and testar_endpoints()):
             interromper("6/6", "API / endpoints")
             return
     else:
@@ -855,33 +1228,60 @@ def instalar_tudo() -> None:
 # ===========================================================================
 
 def resumo() -> None:
-    """Mostra o estado final: containers, dados e enderecos."""
+    """Mostra o estado final: ambiente, containers (ou conexao) e dados."""
     titulo("Resumo do que esta no ar")
-    banco = banco_atual()
+    ambiente = ambiente_atual()
+    ok("ambiente: " + AMBIENTES[ambiente])
 
-    certo, _ = rodar(comando_compose(banco) + ["ps"], "listar os containers do projeto")
-    if not certo:
-        aviso("nao consegui listar os containers; veja o erro acima.")
-        return
+    if ambiente == "neon":
+        # No modo nuvem nao ha container: o "estado" e a conexao e a contagem.
+        if exigir_database_url("estamos conferindo o banco da nuvem"):
+            url = ler_env().get("DATABASE_URL", "").strip()
+            if "sslmode=" not in url:
+                url = url + ("&" if "?" in url else "?") + "sslmode=require"
+            if biblioteca_psycopg2_disponivel():
+                import psycopg2
+                try:
+                    with psycopg2.connect(url) as conexao:
+                        with conexao.cursor() as cursor:
+                            cursor.execute("SELECT COUNT(*) FROM ipca;")
+                            total = cursor.fetchone()[0]
+                    esperado = 563
+                    if total == esperado:
+                        ok("tabela ipca com " + str(total) + " linhas (esperado: " + str(esperado) + ")")
+                    else:
+                        aviso("tabela ipca com " + str(total) + " linhas; o esperado era " + str(esperado) + ".")
+                        o_que_fazer("rode a opcao 5 para recarregar o seed.")
+                except psycopg2.Error as falha:
+                    aviso("nao consegui contar as linhas: " + str(falha).strip().splitlines()[0])
+        print("")
+        print("  # testar os 3 endpoints")
+        rodar([sys.executable, str(SCRIPT_MEDIR)], "medir quantos endpoints respondem")
+    else:
+        banco = banco_atual()
+        certo, _ = rodar(comando_compose(banco) + ["ps"], "listar os containers do projeto")
+        if not certo:
+            aviso("nao consegui listar os containers; veja o erro acima.")
+            return
 
-    config = ler_env()
-    if banco == "postgres":
-        comando = comando_compose(banco) + [
-            "exec", "-T", "postgres", "psql",
-            "-U", config.get("POSTGRES_USER", "termometro"),
-            "-d", config.get("POSTGRES_DB", "termometro"),
-            "-t", "-A", "-c",
-            "SELECT COUNT(*) FROM ipca;",
-        ]
-        certo, saida = rodar(comando, "contar as linhas carregadas na tabela ipca")
-        if certo and saida.strip().isdigit():
-            total = saida.strip().splitlines()[-1]
-            esperado = 563
-            if int(total) == esperado:
-                ok("tabela ipca com " + total + " linhas (esperado: " + str(esperado) + ")")
-            else:
-                aviso("tabela ipca com " + total + " linhas; o esperado era " + str(esperado) + ".")
-                o_que_fazer("rode a opcao 5 para recarregar o seed.")
+        config = ler_env()
+        if banco == "postgres":
+            comando = comando_compose(banco) + [
+                "exec", "-T", "postgres", "psql",
+                "-U", config.get("POSTGRES_USER", "termometro"),
+                "-d", config.get("POSTGRES_DB", "termometro"),
+                "-t", "-A", "-c",
+                "SELECT COUNT(*) FROM ipca;",
+            ]
+            certo, saida = rodar(comando, "contar as linhas carregadas na tabela ipca")
+            if certo and saida.strip().isdigit():
+                total = saida.strip().splitlines()[-1]
+                esperado = 563
+                if int(total) == esperado:
+                    ok("tabela ipca com " + total + " linhas (esperado: " + str(esperado) + ")")
+                else:
+                    aviso("tabela ipca com " + total + " linhas; o esperado era " + str(esperado) + ".")
+                    o_que_fazer("rode a opcao 5 para recarregar o seed.")
 
     explicar(
         "",
@@ -893,8 +1293,65 @@ def resumo() -> None:
     )
 
 
-def desinstalar() -> None:
-    """Derruba os containers e, se o usuario confirmar, apaga os dados."""
+def desinstalar_neon() -> None:
+    """Modo nuvem: para a API local e explica o que acontece com o banco remoto.
+
+    Ponto importante: no Neon nao existe "container para derrubar". O banco
+    continua existindo do outro lado. Apagar o projeto e uma acao diferente e
+    irreversivel — por isso ela vem separada, com aviso e padrao "nao".
+    """
+    titulo("Desinstalacao — ambiente nuvem (Neon)")
+    explicar(
+        "Motivo: liberar a maquina e, se voce quiser, apagar o banco remoto.",
+        "",
+        "Duas coisas diferentes, e so a primeira e leve:",
+        "  1) parar a API local -> nada e perdido, basta subir de novo;",
+        "  2) apagar o projeto no Neon -> o BANCO e os dados vao embora e nao ha",
+        "     como desfazer. Os arquivos do projeto (codigo, .env, SQLs) ficam.",
+    )
+
+    aviso("etapa 1: parar a API local.")
+    parar_api_local()
+
+    if not neon_cli_disponivel():
+        ok("pronto: nada mais a fazer nesta maquina.")
+        explicar("  Para apagar o banco remoto, instale o CLI (npm i -g neon) e use",
+                 "  o console do Neon: https://console.neon.tech")
+        return
+
+    print("")
+    aviso("etapa 2 (opcional): apagar o projeto no Neon e TODOS os dados dele.")
+    o_que_fazer("isto nao pode ser desfeito. Se quiser guardar os dados, copie antes.",
+                "comando equivalente: neon projects delete <projeto>")
+    if not confirmar("Apagar o projeto no Neon agora?", padrao_sim=False):
+        ok("banco remoto preservado.")
+        return
+
+    certo, saida = rodar(comando_neon("projects", "list"), "listar os projetos para confirmar qual apagar")
+    if not certo:
+        return
+    nome = perguntar("Digite o NOME do projeto para confirmar a exclusao", "")
+    if not nome:
+        ok("nada foi apagado (nome vazio).")
+        return
+    certo, _ = rodar(comando_neon("projects", "delete", nome),
+                     "apagar o projeto " + nome + " no Neon",
+                     dica_se_falhar="confira o nome exato com: neon projects list")
+    if certo:
+        ok("projeto " + nome + " apagado no Neon.")
+        o_que_fazer("para criar outro depois: neon init")
+    else:
+        erro("o projeto NAO foi apagado.")
+        print("         " + saida.splitlines()[0] if saida else "")
+
+
+def desinstalar(ambiente: str = None) -> None:
+    """Encerra o ambiente escolhido: containers (Docker) ou API local (Neon)."""
+    ambiente = ambiente or ambiente_atual()
+    if ambiente == "neon":
+        desinstalar_neon()
+        return
+
     titulo("Desinstalacao")
 
     if not exigir_docker("parar containers exige o Docker"):
@@ -956,15 +1413,15 @@ def desinstalar() -> None:
 # ===========================================================================
 
 OPCOES = [
-    ("1", "Verificar os pre-requisitos (Docker, Python, Compose)"),
+    ("1", "Verificar os pre-requisitos do ambiente atual"),
     ("2", "Criar/atualizar o arquivo .env"),
-    ("3", "Escolher o banco (PostgreSQL ou MySQL)"),
-    ("4", "Subir o banco"),
+    ("3", "Escolher o ambiente (Docker local ou Neon)"),
+    ("4", "Preparar o banco (Docker: subir container | Neon: testar conexao)"),
     ("5", "Criar a tabela e carregar os dados (init + seed)"),
-    ("6", "Subir a API"),
+    ("6", "Subir a API (Docker: container | Neon: Uvicorn local)"),
     ("7", "Testar os 3 endpoints"),
     ("8", "Instalar tudo na ordem (2 a 7)"),
-    ("9", "Desinstalar (parar containers e, se quiser, apagar dados)"),
+    ("9", "Desinstalar / parar o ambiente"),
     ("0", "Sair"),
 ]
 
@@ -974,7 +1431,8 @@ def mostrar_menu() -> None:
     titulo("Instalador do Termometro (Degrau 1)")
     explicar(
         "Escolha o numero da acao. Cada acao diz o motivo e confere o que precisa",
-        "antes de agir. Banco configurado agora: " + banco_atual(),
+        "antes de agir.",
+        "Ambiente: " + AMBIENTES[ambiente_atual()] + " | Banco: " + banco_atual(),
     )
     print("")
     for numero, descricao in OPCOES:
@@ -986,8 +1444,8 @@ def main() -> int:
     acoes = {
         "1": lambda: verificar_pre_requisitos(),
         "2": lambda: criar_env(),
-        "3": lambda: escolher_banco() and True,
-        "4": lambda: subir_banco(),
+        "3": lambda: escolher_ambiente() and True,
+        "4": lambda: preparar_banco(),
         "5": lambda: carregar_dados(),
         "6": lambda: subir_api(),
         "7": lambda: testar_endpoints(),
