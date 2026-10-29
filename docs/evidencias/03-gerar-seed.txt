@@ -1,0 +1,10 @@
+Evidência 3 — o gerador de seed le o raw do Banco Central e monta o SQL.
+Prova a contagem real: 563 linhas prontas (561 meses reais + 2 ficticios).
+Comando: python meu-loop-agente/workspace/scripts/gerar_seed.py
+
+[ok] meu-loop-agente\workspace\db\seed.sql gerado (dialeto postgres)
+     linhas totais   : 563
+     linhas reais    : 561
+     linhas ficticias: 2 (ano 2099)
+     linhas ignoradas: 0
+     periodo         : 1980-01-01 a 2026-09-01

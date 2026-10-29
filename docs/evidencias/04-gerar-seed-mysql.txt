@@ -1,0 +1,11 @@
+Evidência 4 — o mesmo seed no dialeto MySQL.
+Prova que o comando final muda para ON DUPLICATE KEY UPDATE, que e o
+equivalente MySQL do ON CONFLICT do PostgreSQL.
+Comando: python .../gerar_seed.py --dialeto mysql
+
+[ok] meu-loop-agente\workspace\db\seed.sql gerado (dialeto mysql)
+     linhas totais   : 563
+     linhas reais    : 561
+     linhas ficticias: 2 (ano 2099)
+     linhas ignoradas: 0
+     periodo         : 1980-01-01 a 2026-09-01

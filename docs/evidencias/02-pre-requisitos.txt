@@ -1,0 +1,59 @@
+Evidência 2 — a opcao 1 confere os pre-requisitos.
+Prova que o instalador detecta o Python correto e avisa, com instrucoes por
+sistema operacional, quando o Docker nao esta instalado (caso desta maquina).
+Comando: python instalar.py   (entrada: 1, depois 0)
+
+================================================================
+Instalador do Termometro (Degrau 1)
+================================================================
+  Escolha o numero da acao. Cada acao explica o que faz antes de agir.
+  Banco configurado agora: postgres
+
+  1) Verificar os pre-requisitos (Docker, Python, Compose)
+  2) Criar/atualizar o arquivo .env
+  3) Escolher o banco (PostgreSQL ou MySQL)
+  4) Subir o banco
+  5) Criar a tabela e carregar os dados (init + seed)
+  6) Subir a API
+  7) Testar os 3 endpoints
+  8) Instalar tudo na ordem (2 a 7)
+  9) Desinstalar (parar containers e, se quiser, apagar dados)
+  0) Sair
+  Opcao [0]: 
+================================================================
+Verificacao dos pre-requisitos
+================================================================
+  Vou conferir tres coisas antes de qualquer instalacao:
+    1) a versao do Python (o projeto precisa de 3.8 ou mais novo);
+    2) se o Docker esta instalado (ele roda o banco e a API);
+    3) se o comando 'docker compose' responde (e ele que le o .yml).
+  [ok] Python 3.14.6 (minimo 3.8)
+  [erro] o comando 'docker' nao foi encontrado.
+  O Docker e o programa que cria os containers (as 'caixas' com o banco
+  e com a API dentro). Sem ele, nada sobe por este instalador.
+  
+  Como instalar no seu sistema (Windows):
+    Windows: baixe o 'Docker Desktop' em https://docs.docker.com/desktop/
+    Depois de instalar, ABRA o Docker Desktop e espere o icone ficar verde.
+    Reinicie o terminal para o comando 'docker' aparecer.
+  
+  Depois de instalar, rode este instalador de novo.
+
+================================================================
+Instalador do Termometro (Degrau 1)
+================================================================
+  Escolha o numero da acao. Cada acao explica o que faz antes de agir.
+  Banco configurado agora: postgres
+
+  1) Verificar os pre-requisitos (Docker, Python, Compose)
+  2) Criar/atualizar o arquivo .env
+  3) Escolher o banco (PostgreSQL ou MySQL)
+  4) Subir o banco
+  5) Criar a tabela e carregar os dados (init + seed)
+  6) Subir a API
+  7) Testar os 3 endpoints
+  8) Instalar tudo na ordem (2 a 7)
+  9) Desinstalar (parar containers e, se quiser, apagar dados)
+  0) Sair
+  Opcao [0]: 
+  Ate logo. Para voltar: python instalar.py

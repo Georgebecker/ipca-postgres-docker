@@ -44,3 +44,15 @@
 - **Decisão**: ACEITO
 - **Data/hora**: 2026-10-29T17:44:00Z
 - **Fonte da medição**: DECLARADA pelo dono (29/10/2026). Mesma ressalva da Iteração 2: sem Docker na máquina que escreveu o log, o número é o informado, não o medido pelo verificador.
+
+## Iteração 4
+- **Hipótese**: Um instalador interativo reduz os passos manuais e evita esquecer etapa (por exemplo, subir o banco sem carregar os dados)
+- **Arquivos alterados**: instalar.py, docker-compose.mysql.yml, meu-loop-agente/workspace/db/mysql/init.sql, meu-loop-agente/workspace/scripts/gerar_seed.py, .env.example, README.md, docker-compose.yml (comentários linha a linha)
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0,00% — iteração de ferramenta e documentação; a métrica do degrau não muda
+- **Comandos passaram**: Sim (`py_compile`, menu do instalador, verificação de pré-requisitos, YAML dos dois compose, seed nos dois dialetos)
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T18:00:00Z
+- **Fonte da medição**: parcialmente medida — `py_compile`, o menu, a geração do seed e a validação de YAML rodaram nesta máquina; nada que dependa de Docker foi executado
+- **Justificativa do aceite**: a regra do loop ("sem melhora, sem mudança") vale para a métrica do degrau. Esta iteração não busca movê-la: entrega ferramenta de operação, aprovada pelo dono. Fica registrada para não sair do histórico.

@@ -1,63 +1,77 @@
-# Sobe o PostgreSQL 16 do projeto Termometro.
-# Os valores de usuario/senha/banco NAO ficam aqui: vem do arquivo .env local,
-# que o .gitignore e os ganchos mantem fora do repositorio.
-services:
-  postgres:
-    image: postgres:16
-    container_name: termometro-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      # 5432 e a porta padrao do PostgreSQL; do lado esquerdo vem a porta do .env,
-      # para nao brigar com outro Postgres que ja esteja rodando na maquina.
+# -----------------------------------------------------------------------------
+# docker-compose.yml — receita dos containers do projeto Termometro.
+#
+# (1) O que e: um arquivo YAML (formato de texto indentado, legivel por humano)
+#     que descreve quais containers o Docker deve criar e como.
+# (2) Para que serve: com um comando ("docker compose up -d") o banco e a API
+#     sobem juntos, com as mesmas configuracoes, em qualquer maquina.
+# (3) Comparacao: e a lista de compras da obra. Em vez de explicar o material
+#     para cada pedreiro, voce entrega a mesma lista e todos constroem igual.
+#
+# Os valores de usuario, senha e banco NAO ficam aqui: vem do arquivo .env
+# local, que o .gitignore e os ganchos mantem fora do repositorio.
+# -----------------------------------------------------------------------------
+services:                     # "services" = a lista de containers que este arquivo cria
+  postgres:                   # nome logico do servico de banco (usado tambem na rede interna)
+    image: postgres:16        # imagem pronta do PostgreSQL 16, baixada do Docker Hub
+    container_name: termometro-postgres   # nome fixo, para os comandos "docker inspect/nome" funcionarem
+    restart: unless-stopped   # reinicia sozinho se cair, mas respeita quando voce para de proposito
+    environment:              # variaveis de ambiente entregues ao container
+      POSTGRES_USER: ${POSTGRES_USER}          # usuario do banco, lido do .env
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # senha do banco, lida do .env (nunca escrita aqui)
+      POSTGRES_DB: ${POSTGRES_DB}              # nome do banco criado na primeira subida
+    ports:                    # ponte entre a porta da sua maquina e a porta do container
+      # Formato "host:container". A esquerda vem a porta do .env (para nao brigar
+      # com outro Postgres ja rodando); a direita e a 5432, padrao do PostgreSQL.
       - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      # Volume nomeado: os dados sobrevivem a `docker compose down`.
-      # Sem ele, cada `up` comecaria com o banco vazio.
+    volumes:                  # pastas/areas que sobrevivem ao container ser destruido
+      # Volume nomeado: os dados do banco ficam guardados fora do container.
+      # Sem ele, cada "down" apagaria a serie do IPCA carregada.
       - pgdata:/var/lib/postgresql/data
-      # init.sql so roda quando o volume esta vazio (primeira subida):
-      # e o PostgreSQL que executa tudo em /docker-entrypoint-initdb.d.
+      # init.sql e montado na pasta especial do PostgreSQL, que executa todo
+      # arquivo .sql dela na PRIMEIRA subida (quando o volume esta vazio).
+      # ":ro" significa somente leitura: o container nao pode alterar o arquivo.
       - ./meu-loop-agente/workspace/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-    healthcheck:
-      # pg_isready responde "estou aceitando conexao?". O $$ escapa o $ para
-      # o proprio container ler a variavel, e nao o compose aqui fora.
+    healthcheck:              # verificacao automatica de "esta funcionando?"
+      # pg_isready responde "estou aceitando conexao?". O "$$" duplo e proposital:
+      # faz o compose entregar "$" ao container, para que ELE leia a variavel.
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+      interval: 5s            # pergunta de 5 em 5 segundos
+      timeout: 5s             # desiste da resposta depois de 5 segundos
+      retries: 10             # depois de 10 falhas seguidas, marca como "unhealthy"
+      start_period: 10s       # 10 segundos de paciencia inicial (o banco esta subindo)
 
-  api:
-    # Constrói a imagem a partir do Dockerfile que está ao lado do código.
+  api:                        # segundo servico: a API em Python (FastAPI)
+    # Constroi a imagem a partir do Dockerfile que esta na pasta indicada.
+    # "build" (em vez de "image") = a imagem e feita na sua maquina.
     build: ./meu-loop-agente/workspace/api
-    container_name: termometro-api
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      # Dentro da rede do compose o banco é alcançado pelo NOME DO SERVIÇO
-      # ("postgres"), não por localhost: localhost, aqui, seria o próprio
-      # container da API.
+    container_name: termometro-api      # nome fixo do container da API
+    restart: unless-stopped             # mesma regra de reinicio do banco
+    environment:                        # configuracoes entregues a API
+      POSTGRES_USER: ${POSTGRES_USER}          # mesmo usuario do banco
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # mesma senha (vem do .env)
+      POSTGRES_DB: ${POSTGRES_DB}              # mesmo banco
+      # Dentro da rede do compose, o banco e alcancado pelo NOME DO SERVICO.
+      # "localhost", aqui dentro, seria o proprio container da API.
       POSTGRES_HOST: postgres
+      # A porta interna do PostgreSQL e sempre 5432, mesmo que no host seja outra.
       POSTGRES_PORT: 5432
     ports:
+      # Publica a API no host: porta do .env (padrao 8000) apontando para a 8000 interna.
       - "${API_PORT:-8000}:8000"
-    depends_on:
+    depends_on:               # ordem de subida: a API depende do banco
       postgres:
-        # Só sobe depois que o banco responder ao pg_isready. Sem isso, a API
-        # tentaria conectar durante a inicialização do PostgreSQL e morreria.
+        # "service_healthy" espera o healthcheck do banco passar. Sem isso, a API
+        # tentaria conectar enquanto o PostgreSQL ainda inicializa e morreria.
         condition: service_healthy
-    healthcheck:
-      # A imagem slim não tem curl; o próprio Python faz a chamada.
+    healthcheck:              # a API tambem ganha verificacao automatica
+      # A imagem slim nao traz "curl"; o proprio Python faz a chamada HTTP.
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      interval: 10s           # pergunta de 10 em 10 segundos
+      timeout: 5s             # desiste depois de 5 segundos
+      retries: 5              # 5 falhas seguidas = "unhealthy"
+      start_period: 10s       # tempo de tolerancia inicial (a API esta importando as bibliotecas)
 
-volumes:
-  pgdata:
+volumes:                      # declaracao dos volumes nomeados usados acima
+  pgdata:                     # nome do volume; o Docker guarda em uma area propria dele
+
