@@ -36,5 +36,4 @@ logs/
 .DS_Store
 Thumbs.db
 .neon
-node_modules/
 .api.pid

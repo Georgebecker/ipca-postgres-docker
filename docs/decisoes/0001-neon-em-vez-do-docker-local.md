@@ -69,8 +69,9 @@ projeto volta a rodar local sem reescrever nada.
   Enquanto essa ponte não existir, os endpoints continuam servindo o banco local.
 - O `.env` passou a ter as duas configurações (local e Neon), o que permite alternar sem
   apagar nada.
-- O repositório ganhou arquivos do CLI da Neon (`neon.ts`, `package.json`), que são de
-  configuração e não guardam segredo.
+- O `neon init` criou arquivos de configuração em Node (`neon.ts`, `package.json`,
+  `package-lock.json`); eles não eram usados pelo código Python e **foram removidos**.
+  Ficou apenas o `.neon`, que guarda org/projeto/branch e é o que os comandos do CLI leem.
 
 ## O que eu faria diferente
 
