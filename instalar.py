@@ -294,6 +294,28 @@ def neon_cli_disponivel() -> bool:
     return shutil.which("neon") is not None
 
 
+def montar_url_segura(url: str) -> str:
+    """Prepara a URL de conexão para o psycopg2: tira prefixo de ORM e garante SSL.
+
+    Dois ajustes que evitam erro na hora de conectar:
+
+    1. `postgresql+psycopg2://` **é sintaxe do SQLAlchemy**, não do psycopg2 puro.
+       Este projeto usa psycopg2 direto; se a URL vier com esse sufixo (copiada de
+       um projeto que usa ORM), o driver recusa com "invalid URI scheme". Aqui o
+       sufixo é removido e a URL volta ao formato que o psycopg2 entende.
+    2. O Neon exige conexão criptografada; sem `sslmode` a conexão é recusada com
+       uma mensagem que não explica o motivo.
+    """
+    for prefixo in ("postgresql+psycopg2://", "postgres+psycopg2://"):
+        if url.startswith(prefixo):
+            url = "postgresql://" + url.split("://", 1)[1]
+            break
+
+    if "sslmode=" in url:
+        return url
+    return url + ("&" if "?" in url else "?") + "sslmode=require"
+
+
 def comando_neon(*argumentos: str) -> list:
     """Monta o comando do CLI do Neon de um jeito que funcione no Windows.
 
@@ -656,35 +678,6 @@ def criar_env() -> bool:
 # 8. Opcao 3 — escolher o banco
 # ===========================================================================
 
-def escolher_banco() -> str:
-    """Pergunta qual banco usar e grava a escolha no `.env`. Devolve o nome."""
-    titulo("Escolha do banco de dados")
-    explicar(
-        "Motivo: o projeto foi escrito para PostgreSQL; o MySQL e um extra para",
-        "comparar os dois. A escolha muda o arquivo de estrutura e o dialecto do SQL.",
-        "",
-        "1) PostgreSQL (padrao):",
-        "   - e o banco da trilha; tabela, seed e API ja estao prontos para ele;",
-        "   - tipos exatos como NUMERIC(10,4) e CHECK funcionando sem surpresa.",
-        "",
-        "2) MySQL (extra opcional, experimental):",
-        "   - serve para comparar os dois bancos e ver as diferencas de SQL;",
-        "   - o seed precisa ser gerado com '--dialeto mysql';",
-        "   - a API deste projeto le do PostgreSQL, entao com MySQL ela nao sobe.",
-    )
-
-    escolha = perguntar_opcao("Qual banco? 1 = PostgreSQL, 2 = MySQL", ("1", "2"), "1")
-    banco = "mysql" if escolha == "2" else "postgres"
-    definir_no_env("BANCO", banco)
-    ok("banco escolhido: " + banco + " (gravado no .env como BANCO)")
-
-    if banco == "mysql":
-        aviso("escolha experimental.")
-        o_que_fazer("suba com: docker compose -f docker-compose.mysql.yml up -d",
-                    "e gere o seed com: python .../gerar_seed.py --dialeto mysql")
-    return banco
-
-
 # ===========================================================================
 # 9. Opcao 4 — subir o banco
 # ===========================================================================
@@ -776,9 +769,7 @@ def preparar_banco_neon() -> bool:
     if not exigir_database_url("e ela que aponta para o banco na nuvem"):
         return False
 
-    url = ler_env().get("DATABASE_URL", "").strip()
-    if "sslmode=" not in url:
-        url = url + ("&" if "?" in url else "?") + "sslmode=require"
+    url = montar_url_segura(ler_env().get("DATABASE_URL", "").strip())
 
     if biblioteca_psycopg2_disponivel():
         import psycopg2
@@ -1138,7 +1129,12 @@ def testar_endpoints() -> bool:
         return True
 
     erro("nem todos os endpoints responderam.")
-    o_que_fazer("veja o log da API: docker compose logs --tail=30 api")
+    if ambiente_atual() == "neon":
+        o_que_fazer("suba a API com a opcao 6 (Uvicorn local).",
+                    "se ela ja estiver rodando, veja a janela/processo do Uvicorn;",
+                    "para reiniciar do zero: opcao 9 e depois opcao 6.")
+    else:
+        o_que_fazer("veja o log da API: docker compose logs --tail=30 api")
     return False
 
 
@@ -1236,9 +1232,7 @@ def resumo() -> None:
     if ambiente == "neon":
         # No modo nuvem nao ha container: o "estado" e a conexao e a contagem.
         if exigir_database_url("estamos conferindo o banco da nuvem"):
-            url = ler_env().get("DATABASE_URL", "").strip()
-            if "sslmode=" not in url:
-                url = url + ("&" if "?" in url else "?") + "sslmode=require"
+            url = montar_url_segura(ler_env().get("DATABASE_URL", "").strip())
             if biblioteca_psycopg2_disponivel():
                 import psycopg2
                 try:
@@ -1293,63 +1287,27 @@ def resumo() -> None:
     )
 
 
-def desinstalar_neon() -> None:
-    """Modo nuvem: para a API local e explica o que acontece com o banco remoto.
-
-    Ponto importante: no Neon nao existe "container para derrubar". O banco
-    continua existindo do outro lado. Apagar o projeto e uma acao diferente e
-    irreversivel — por isso ela vem separada, com aviso e padrao "nao".
-    """
-    titulo("Desinstalacao — ambiente nuvem (Neon)")
-    explicar(
-        "Motivo: liberar a maquina e, se voce quiser, apagar o banco remoto.",
-        "",
-        "Duas coisas diferentes, e so a primeira e leve:",
-        "  1) parar a API local -> nada e perdido, basta subir de novo;",
-        "  2) apagar o projeto no Neon -> o BANCO e os dados vao embora e nao ha",
-        "     como desfazer. Os arquivos do projeto (codigo, .env, SQLs) ficam.",
-    )
-
-    aviso("etapa 1: parar a API local.")
-    parar_api_local()
-
-    if not neon_cli_disponivel():
-        ok("pronto: nada mais a fazer nesta maquina.")
-        explicar("  Para apagar o banco remoto, instale o CLI (npm i -g neon) e use",
-                 "  o console do Neon: https://console.neon.tech")
-        return
-
-    print("")
-    aviso("etapa 2 (opcional): apagar o projeto no Neon e TODOS os dados dele.")
-    o_que_fazer("isto nao pode ser desfeito. Se quiser guardar os dados, copie antes.",
-                "comando equivalente: neon projects delete <projeto>")
-    if not confirmar("Apagar o projeto no Neon agora?", padrao_sim=False):
-        ok("banco remoto preservado.")
-        return
-
-    certo, saida = rodar(comando_neon("projects", "list"), "listar os projetos para confirmar qual apagar")
-    if not certo:
-        return
-    nome = perguntar("Digite o NOME do projeto para confirmar a exclusao", "")
-    if not nome:
-        ok("nada foi apagado (nome vazio).")
-        return
-    certo, _ = rodar(comando_neon("projects", "delete", nome),
-                     "apagar o projeto " + nome + " no Neon",
-                     dica_se_falhar="confira o nome exato com: neon projects list")
-    if certo:
-        ok("projeto " + nome + " apagado no Neon.")
-        o_que_fazer("para criar outro depois: neon init")
-    else:
-        erro("o projeto NAO foi apagado.")
-        print("         " + saida.splitlines()[0] if saida else "")
-
-
 def desinstalar(ambiente: str = None) -> None:
-    """Encerra o ambiente escolhido: containers (Docker) ou API local (Neon)."""
+    """Encerra o que roda NA SUA MÁQUINA. O banco da nuvem não é afetado.
+
+    No modo Neon não existe nada para "derrubar" do lado do banco: ele vive no
+    servidor do Neon e continua lá. O que este menu encerra é o processo local
+    da API (Uvicorn). Se você quiser apagar os DADOS, isso é uma decisão à parte,
+    feita com SQL (DROP TABLE) — e não é papel de um instalador.
+    """
     ambiente = ambiente or ambiente_atual()
     if ambiente == "neon":
-        desinstalar_neon()
+        titulo("Parar o ambiente local (banco na nuvem)")
+        explicar(
+            "Motivo: liberar a porta 8000 e encerrar o Uvicorn que esta na sua maquina.",
+            "",
+            "O banco do Neon NAO e afetado: ele esta no servidor do Neon e continua",
+            "existindo, com todos os dados. Para apagar as tabelas algum dia, o",
+            "caminho e SQL, nao um menu:",
+            "    DROP TABLE ipca;",
+        )
+        parar_api_local()
+        ok("ambiente local encerrado. Banco da nuvem preservado.")
         return
 
     titulo("Desinstalacao")

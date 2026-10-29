@@ -93,10 +93,12 @@ def ler_env() -> dict:
 
 
 def obter_url() -> str:
-    """Devolve a DATABASE_URL, com sslmode garantido.
+    """Devolve a DATABASE_URL pronta para o psycopg2.
 
-    O Neon exige conexão criptografada. Se a URL vier sem `sslmode`, a conexão é
-    recusada com uma mensagem que não explica o motivo — por isso o ajuste aqui.
+    Dois ajustes que evitam erro na conexão:
+    1. `postgresql+psycopg2://` é sintaxe do SQLAlchemy, não do psycopg2 puro —
+       se a URL vier assim, o sufixo é removido (este projeto não usa ORM).
+    2. O Neon exige conexão criptografada; se faltar `sslmode`, ele é acrescentado.
     """
     url = ler_env().get("DATABASE_URL", "").strip()
     if not url:
@@ -104,6 +106,12 @@ def obter_url() -> str:
         o_que_fazer("rode: neon init   (ou copie a connection string do console do Neon",
                     "e cole em DATABASE_URL=... no .env)")
         raise SystemExit(1)
+
+    for prefixo in ("postgresql+psycopg2://", "postgres+psycopg2://"):
+        if url.startswith(prefixo):
+            url = "postgresql://" + url.split("://", 1)[1]
+            break
+
     if "sslmode=" in url:
         return url
     return url + ("&" if "?" in url else "?") + "sslmode=require"

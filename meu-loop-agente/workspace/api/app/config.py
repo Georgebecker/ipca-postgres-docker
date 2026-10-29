@@ -90,13 +90,22 @@ class Configuracoes(BaseSettings):
 
     @property
     def dsn(self) -> str:
-        """Devolve a URL de conexão pronta, garantindo SSL quando é nuvem.
+        """Devolve a URL de conexão pronta para o psycopg2.
 
-        Por que mexer no sslmode: o Neon exige conexão criptografada. Se a URL
-        vier sem `sslmode`, a conexão é recusada com um erro que não explica
-        nada. Acrescentar aqui evita essa armadilha.
+        Dois ajustes, cada um resolve um erro real:
+
+        1. `postgresql+psycopg2://` é sintaxe do **SQLAlchemy**, não do psycopg2
+           puro. Este projeto não usa ORM; se a URL chegar com esse sufixo, o
+           driver recusa ("invalid URI scheme"). O sufixo é removido aqui.
+        2. O Neon exige conexão criptografada. Sem `sslmode`, a conexão é recusada
+           com uma mensagem que não explica nada.
         """
         url = self.database_url or ""
+        for prefixo in ("postgresql+psycopg2://", "postgres+psycopg2://"):
+            if url.startswith(prefixo):
+                url = "postgresql://" + url.split("://", 1)[1]
+                break
+
         if "sslmode=" in url:
             return url
         separador = "&" if "?" in url else "?"
