@@ -54,13 +54,39 @@ ipca-postgres-docker/
 # ipca-postgres-docker (Termômetro)
 
 ## O que é
-API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada em PostgreSQL rodando em Docker.
+
+API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada em
+PostgreSQL rodando em Docker. "SGS" é o Sistema Gerenciador de Séries Temporais do Banco
+Central, e a série 433 é a variação mensal do IPCA.
+
+Três rotas, e o resultado de cada uma:
+
+```console
+$ curl http://localhost:8000/health
+{"status":"ok","postgres":"ok","versao_postgres":"PostgreSQL 16.x"}
+
+$ curl http://localhost:8000/ipca/ultimo
+{"data":"2099-02-01","valor":2.3456,"tipo":"ficticio"}
+
+$ curl "http://localhost:8000/ipca/serie?tipo=real"
+[{"data":"1980-01-01","valor":6.62,"tipo":"real"},
+ {"data":"1980-02-01","valor":4.62,"tipo":"real"}, ...]
+```
+
+O `/ipca/ultimo` devolver **2099** é proposital: os dois registros fictícios estão no fim
+da linha do tempo, então são os mais recentes. É o teste de que a ordenação funciona.
 
 ## Por que existe
 É o Degrau 1 de uma trilha de 5 projetos pequenos que, juntos, formam as peças de um projeto final chamado "Encurtador de Links". Este degrau treina modelagem de banco relacional, Docker e seed.
 
 ## Onde esta técnica aparece no projeto final
-No Encurtador, o PostgreSQL guarda os links e as campanhas; a modelagem aprendida aqui é a mesma usada lá.
+
+No projeto final (Encurtador de Links), o PostgreSQL guarda os links e as campanhas. A
+modelagem aprendida aqui é a mesma: uma tabela com chave própria (`id`), uma coluna de
+negócio com `UNIQUE` (ali o código curto do link; aqui a competência mensal), valores
+tipados com precisão (`NUMERIC`, não `FLOAT`) e um índice pensado para a consulta mais
+frequente. O Docker e o seed também se repetem: subir banco com um comando e poder
+recarregar os dados do zero é o que torna o projeto reproduzível.
 
 ## Estrutura de pastas
 - `.githooks/` — ganchos que bloqueiam segredo no commit e no push.
@@ -157,15 +183,36 @@ A documentação interativa do FastAPI (Swagger) fica em <http://localhost:8000/
 - **Recrutadores e visitantes:** é projeto real, construído em ciclos, com o log em
   [`meu-loop-agente/log.md`](meu-loop-agente/log.md) — não é tutorial copiado.
 
-## Transparência e limitações
+## Decisões técnicas
 
-- **Sem Docker ainda:** o `docker-compose` do PostgreSQL é o primeiro ciclo pendente; o
-  Docker não está instalado na máquina onde a base foi criada, então nada foi testado.
-- **Sem dados e sem schema:** nenhuma série do IPCA foi baixada, limpa ou carregada.
-- **Contrato do loop no exemplo da base:** `program.md` e `config_loop.json` ainda falam
-  do exemplo Next.js (métrica de bundle) e precisam da métrica real do projeto.
-- **`.env` herdado da base:** o arquivo local aponta `DB_URL` para SQLite; a troca para
-  PostgreSQL é decisão do dono do projeto.
+Cada decisão com alternativa considerada e consequência assumida fica em um **ADR**
+(Architecture Decision Record — registro curto do porquê de uma escolha):
+
+- [ADR 0001 — Por que PostgreSQL neste degrau](docs/adr/0001-por-que-postgresql.md):
+  compara com SQLite, MySQL e CSV, e explica `NUMERIC(10,4)`, o `UNIQUE` em `data` e o
+  índice `data DESC`.
+
+As decisões de processo (o que ficou fora do degrau e por quê) estão em
+[`docs/proximo-degrau.md`](docs/proximo-degrau.md).
+
+## Limitações conhecidas
+
+O que este projeto **não** faz — de propósito, por escopo do degrau:
+
+- **Sem testes automatizados.** Toda verificação é manual (`curl`, consulta SQL). Um erro
+  de regressão só aparece se alguém olhar; é exatamente o que o Degrau 2 resolve.
+- **Sem CI/CD.** Nada roda sozinho a cada push; o gancho `pre-commit` e o `pre-push`
+  impedem segredo, mas não testam código.
+- **Sem autenticação.** Quem alcança a porta 8000 lê a série inteira. É API de leitura
+  local, não serviço público.
+- **API só de leitura.** Não há `POST`, `PUT` nem `DELETE`; a carga acontece pelo
+  `seed.sql`, aplicado à mão.
+- **Dados fictícios convivem com os reais.** Os dois registros de 2099 contaminam
+  qualquer média ou contagem que não filtre `?tipo=real`.
+- **Sem migração de schema.** Não há Alembic: mudar `init.sql` exige recriar o volume
+  `pgdata` e reaplicar o seed.
+- **Uma única série (433).** Não há comparação com outras séries, nem tratamento da
+  mudança de metodologia do IPCA em 1999.
 
 ## Apoie o autor
 

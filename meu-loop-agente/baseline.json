@@ -27,5 +27,17 @@
     "endpoints_funcionando": 0,
     "linhas_prontas_no_seed": 0,
     "observacao": "Foto do estado antes de qualquer mudanca. Serve para comparar depois."
+  },
+  "estado_final": {
+    "data": "2026-10-29",
+    "degrau": 1,
+    "banco_existe": true,
+    "tabela_existe": true,
+    "api_existe": true,
+    "endpoints_funcionando": 3,
+    "registros_no_banco": 563,
+    "registros_reais": 561,
+    "registros_ficticios": 2,
+    "fonte": "declaracao do dono (29/10/2026); os endpoints nao foram medidos na maquina onde este arquivo foi escrito, porque ela nao tem Docker"
   }
 }
