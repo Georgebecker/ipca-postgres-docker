@@ -15,10 +15,8 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-# Os três tipos aceitos pelo CHECK da tabela. A API valida aqui para responder
-# 422 (pedido inválido) em vez de devolver lista vazia e deixar o usuário confuso.
-TIPOS_VALIDOS = ("real", "ficticio")
-
+# Os três tipos aceitos pelo CHECK da tabela são validados na rota (`Literal`),
+# antes de qualquer consulta: pedido inválido recebe 422, não uma lista vazia.
 SQL_ULTIMO = """
     SELECT data, valor, tipo
     FROM ipca
