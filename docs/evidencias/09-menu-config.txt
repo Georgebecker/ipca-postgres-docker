@@ -1,0 +1,21 @@
+Evidência 5 — o menu da central de operação (workspace/config.py).
+Prova que o menu existe, que cada opção tem descrição e que a opção 0 encerra
+o programa. Comando: python meu-loop-agente/workspace/config.py   (entrada: 0)
+
+================================================================
+Termometro — central de operacao
+================================================================
+  Escolha o numero. Cada opcao explica o que faz antes de agir.
+  Banco configurado: postgres
+
+  1) Baixar os dados do Banco Central (serie 433)
+  2) Gerar o seed.sql a partir do dado baixado
+  3) Subir banco e API
+  4) Derrubar os containers (os dados ficam no volume)
+  5) Ver os logs (banco e/ou API)
+  6) Rodar as consultas de verificacao
+  7) Ver o estado do sistema (containers, linhas, endpoints)
+  8) Instalar ou desinstalar (abre o instalar.py)
+  0) Sair
+  Opcao [0]: 
+  Ate logo. Para voltar: python meu-loop-agente/workspace/config.py

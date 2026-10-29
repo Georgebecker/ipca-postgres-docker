@@ -1,0 +1,67 @@
+Evidência 6 — a opção 7 (estado do sistema) numa máquina SEM Docker.
+Prova que o menu não quebra quando o Docker falta: ele avisa, diz o que não
+conseguiu consultar e segue. É a degradação graciosa, não o travamento.
+Comando: python meu-loop-agente/workspace/config.py   (entrada: 7, depois 0)
+
+================================================================
+Termometro — central de operacao
+================================================================
+  Escolha o numero. Cada opcao explica o que faz antes de agir.
+  Banco configurado: postgres
+
+  1) Baixar os dados do Banco Central (serie 433)
+  2) Gerar o seed.sql a partir do dado baixado
+  3) Subir banco e API
+  4) Derrubar os containers (os dados ficam no volume)
+  5) Ver os logs (banco e/ou API)
+  6) Rodar as consultas de verificacao
+  7) Ver o estado do sistema (containers, linhas, endpoints)
+  8) Instalar ou desinstalar (abre o instalar.py)
+  0) Sair
+  Opcao [0]: 
+================================================================
+Estado do sistema
+================================================================
+  Tres perguntas, na ordem em que costumam falhar:
+    1) os containers estao de pe? (docker compose ps)
+    2) o banco tem os dados? (SELECT COUNT(*) FROM ipca)
+    3) a API responde? (chamada nos 3 endpoints)
+
+  # listar os containers do projeto
+  $ docker compose ps
+  [erro] nao encontrei o programa 'docker' no PATH.
+
+  # perguntar ao banco quantas linhas existem
+  [aviso] contagem indisponivel: nao foi possivel consultar
+
+  # testar os 3 endpoints
+
+  # medir quantos endpoints respondem
+  $ C:\Users\user\AppData\Local\Programs\Python\Python314\python.exe D:\Projetos\ipca-postgres-docker\meu-loop-agente\workspace\scripts\medir_endpoints.py
+  [erro] terminou com codigo 1.
+         [falha] GET /health -> sem conexao ([WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente)
+         [falha] GET /ipca/ultimo -> sem conexao ([WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente)
+         [falha] GET /ipca/serie -> sem conexao ([WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente)
+       
+       endpoints ok   : 0
+       endpoints total: 3
+       
+       A API nao respondeu. Suba o ambiente com: docker compose up -d
+
+================================================================
+Termometro — central de operacao
+================================================================
+  Escolha o numero. Cada opcao explica o que faz antes de agir.
+  Banco configurado: postgres
+
+  1) Baixar os dados do Banco Central (serie 433)
+  2) Gerar o seed.sql a partir do dado baixado
+  3) Subir banco e API
+  4) Derrubar os containers (os dados ficam no volume)
+  5) Ver os logs (banco e/ou API)
+  6) Rodar as consultas de verificacao
+  7) Ver o estado do sistema (containers, linhas, endpoints)
+  8) Instalar ou desinstalar (abre o instalar.py)
+  0) Sair
+  Opcao [0]: 
+  Ate logo. Para voltar: python meu-loop-agente/workspace/config.py

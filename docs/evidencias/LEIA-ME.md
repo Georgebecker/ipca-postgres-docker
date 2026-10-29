@@ -15,6 +15,8 @@ gerou e a entrada digitada. O resto é a saída, copiada sem edição.
 | `02-pre-requisitos.txt` | A opção 1 confere Python, Docker e Compose — e, sem Docker, explica como instalar por sistema operacional | `python instalar.py` (entrada `1`, depois `0`) |
 | `03-gerar-seed.txt` | O seed é montado a partir do dado real: 563 linhas (561 meses + 2 fictícios) | `python .../gerar_seed.py` |
 | `04-gerar-seed-mysql.txt` | O mesmo seed no dialeto MySQL, terminando em `ON DUPLICATE KEY UPDATE` | `python .../gerar_seed.py --dialeto mysql` |
+| `09-menu-config.txt` | A central de operação existe, com 9 opções descritivas, e encerra limpo | `python meu-loop-agente/workspace/config.py` (entrada `0`) |
+| `10-estado-sem-docker.txt` | O menu **não quebra** sem Docker: avisa, diz o que não conseguiu consultar e segue | `python meu-loop-agente/workspace/config.py` (entrada `7`, depois `0`) |
 
 Todas foram geradas na máquina de desenvolvimento, **sem Docker**, porque nenhuma delas
 precisa de container.

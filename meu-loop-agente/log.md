@@ -56,3 +56,15 @@
 - **Data/hora**: 2026-10-29T18:00:00Z
 - **Fonte da medição**: parcialmente medida — `py_compile`, o menu, a geração do seed e a validação de YAML rodaram nesta máquina; nada que dependa de Docker foi executado
 - **Justificativa do aceite**: a regra do loop ("sem melhora, sem mudança") vale para a métrica do degrau. Esta iteração não busca movê-la: entrega ferramenta de operação, aprovada pelo dono. Fica registrada para não sair do histórico.
+
+## Iteração 5
+- **Hipótese**: Uma central de operação (menu) reduz o esforço diário de baixar dado, gerar seed, subir/derrubar, ver log, conferir dados e ver estado — sem decorar comando
+- **Arquivos alterados**: meu-loop-agente/workspace/config.py (novo), docs/evidencias/09-menu-config.txt e 10-estado-sem-docker.txt (novos), docs/evidencias/LEIA-ME.md
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0,00% — iteração de ferramenta; a métrica do degrau não muda
+- **Comandos passaram**: Sim (`py_compile`; menu abriu e encerrou com código 0; opção 7 rodou sem Docker e degradou com aviso, sem quebrar)
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T18:10:00Z
+- **Fonte da medição**: parcialmente medida — só o que não depende de Docker foi executado; subir, derrubar, logs, consultas e contagem de linhas ficaram sem prova nesta máquina
+- **Justificativa do aceite**: mesma da Iteração 4 — ferramenta de operação, não melhoria de métrica. O `config.py` reaproveita as funções do `instalar.py` para não criar duas versões da mesma regra.
