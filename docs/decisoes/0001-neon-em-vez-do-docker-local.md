@@ -59,7 +59,9 @@ projeto volta a rodar local sem reescrever nada.
 
 ## Consequência
 
-- O degrau segue: dá para criar a tabela `ipca`, carregar os 561 meses e consultar por SQL.
+- O degrau segue: a tabela `ipca` foi criada no Neon e recebeu os **563 registros**
+  (561 meses reais + 2 fictícios), conferidos por três consultas — ver
+  `docs/evidencias/15-neon-tabela-populada.txt`.
 - **Perde-se, por ora, a prática de Docker** — a parte "containers, volume e healthcheck"
   fica sem exercício real e precisa ser retomada.
 - **A API ainda não fala com o Neon.** Ela lê `POSTGRES_HOST`, `POSTGRES_PORT`,

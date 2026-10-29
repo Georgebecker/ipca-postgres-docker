@@ -1,0 +1,47 @@
+Evidência 10 — a tabela ipca criada e populada no Neon (29/10/2026)
+
+Prova que: o init.sql criou a tabela e o índice, o seed.sql inseriu as 563 linhas
+(561 meses reais + 2 fictícios) e as três conferências batem com o esperado.
+
+Comando usado (o arquivo .sql é enviado pela entrada padrão):
+    type meu-loop-agente\workspace\db\init.sql | neon psql
+    type meu-loop-agente\workspace\db\seed.sql | neon psql
+
+--- init.sql ---
+CREATE TABLE
+CREATE INDEX
+
+--- seed.sql ---
+BEGIN
+INSERT 0 563
+COMMIT
+
+--- Conferência 1: total de linhas (esperado 563) ---
+ total
+-------
+   563
+(1 row)
+
+--- Conferência 2: quantidade por tipo (esperado real=561, ficticio=2) ---
+   tipo   | quantidade
+----------+------------
+ ficticio |          2
+ real     |        561
+(2 rows)
+
+--- Conferência 3: os 5 mais recentes ---
+    data    |  valor  |   tipo
+------------+---------+----------
+ 2099-02-01 |  2.3456 | ficticio
+ 2099-01-01 |  1.2345 | ficticio
+ 2026-09-01 |  0.8200 | real
+ 2026-08-01 | -0.3200 | real
+ 2026-07-01 |  0.0700 | real
+(5 rows)
+
+Observação: os dois registros de 2099 aparecem no topo de propósito — são os
+fictícios, e servem para provar que a ordenação por data funciona.
+
+Esta evidência substitui parcialmente as que estavam pendentes por falta de Docker
+(05, 06 e 07 do LEIA-ME): o banco agora existe e responde, ainda que na nuvem e não
+em container.
