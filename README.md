@@ -256,8 +256,13 @@ opção `0` encerra.*
 *A condicionante do Docker: o fluxo para antes de tentar rodar comando impossível e diz o
 motivo e o que fazer agora.*
 
-As demais (`02-pre-requisitos.png` e `11-opcao-invalida.png`) estão em
-[`docs/img/`](docs/img/), com a legenda no mesmo log.
+As demais (`02-pre-requisitos.png`, `11-opcao-invalida.png` e `13-opcao-8-etapas.png`)
+estão em [`docs/img/`](docs/img/), com a legenda no mesmo log.
+
+![Opção 8 anunciando as 6 etapas e dizendo em qual parou](docs/img/13-opcao-8-etapas.png)
+
+*A opção 8 (instalar tudo) numera as etapas e, ao falhar, diz onde parou, o que já deu
+certo e que nada foi desfeito — em vez de voltar ao menu em silêncio.*
 
 ## Apoie o autor
 

@@ -80,3 +80,15 @@
 - **Data/hora**: 2026-10-29T18:20:00Z
 - **Fonte da medição**: parcialmente medida — os três cenários de tela rodaram nesta máquina; os caminhos que tocam Docker (subir, aplicar SQL, desinstalar de verdade) seguem sem prova aqui
 - **O que mudou na prática**: `exigir_docker`, `exigir_env` e `exigir_arquivo` passaram a rodar ANTES de cada comando; `perguntar_opcao` repete com explicação quando a resposta é inválida; `rodar` ganhou `dica_se_falhar`, que imprime o próximo passo concreto; e uma rede de segurança no `__main__` converte exceção não prevista em mensagem legível
+
+## Iteração 7
+- **Hipótese**: A opção 8 "não fazia nada" porque, ao falhar, `instalar_tudo` voltava ao menu sem anunciar a interrupção; e o `getpass` pedia a senha sem avisar antes, parecendo travado
+- **Arquivos alterados**: instalar.py (`instalar_tudo` com etapas numeradas e mensagem de interrupção; `criar_env` com aviso prévio da senha e guarda de terminal não interativo), docs/evidencias e docs/img (nova evidência 13)
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0,00% — correção de comunicação; a métrica do degrau não muda
+- **Comandos passaram**: Sim (`py_compile`; opção 8 anunciou etapas 1/6 e interrompeu com causa, lista do que deu certo e próximo passo; opção 2 em cópia isolada mostrou o aviso da senha e tratou stdin não interativo sem travar)
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T18:30:00Z
+- **Fonte da medição**: parcialmente medida — os dois cenários rodaram nesta máquina; o caminho com Docker (etapas 4 a 6) segue sem prova aqui
+- **Cuidado tomado**: o teste de `criar_env` rodou numa cópia em diretório temporário, para não sobrescrever o `.env` real do dono (conferido depois: 26 linhas, 694 bytes, inalterado)

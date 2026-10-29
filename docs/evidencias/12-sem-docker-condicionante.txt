@@ -1,5 +1,5 @@
 Teste 4 - condicionante do Docker (opcao 4)
-A opcao 'subir o banco' confere o Docker antes de agir e mostra as tres partes: a condicao que falhou, o motivo e o proximo passo. (entrada: 4, depois 0)
+A opcao 'subir o banco' confere o Docker antes de agir e mostra as tres partes: condicao que falhou, motivo e proximo passo. (entrada: 4, depois 0)
 
 >>> executando a opcao 4 ...
 

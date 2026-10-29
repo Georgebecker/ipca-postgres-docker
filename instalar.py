@@ -449,7 +449,24 @@ def criar_env() -> bool:
     shutil.copyfile(str(ARQ_ENV_EXEMPLO), str(ARQ_ENV))
     ok(".env criado a partir do .env.example")
 
-    senha = getpass.getpass("  Digite a senha do banco (nao aparece na tela): ").strip()
+    # Aviso ANTES de pedir a senha: o getpass nao ecoa o que foi digitado.
+    # Sem este aviso, a tela parece travada e a pessoa acha que o programa morreu.
+    print("")
+    aviso("ATENCAO: a proxima linha pede a senha e NAO mostra o que voce digita.")
+    explicar(
+        "  Digite a senha e aperte Enter. Nada aparece enquanto digita — isso e",
+        "  normal e proposital (ninguem ao lado consegue ler).",
+        "  Se preferir manter a senha de exemplo do arquivo, apenas aperte Enter.",
+    )
+    print("")
+
+    if not sys.stdin.isatty():
+        aviso("este terminal nao permite entrada escondida (stdin nao e interativo).")
+        o_que_fazer("rode o instalador em um terminal de verdade,",
+                    "ou edite POSTGRES_PASSWORD direto no .env.")
+        senha = ""
+    else:
+        senha = getpass.getpass("  Senha do banco: ").strip()
     if not senha:
         aviso("senha vazia: mantive o marcador 'troque_esta_senha'.")
         o_que_fazer("troque esse valor no .env antes de subir o banco em producao.")
@@ -756,34 +773,80 @@ def testar_endpoints() -> bool:
 # ===========================================================================
 
 def instalar_tudo() -> None:
-    """Roda a sequencia inteira: pre-requisitos, .env, banco, dados, API e teste."""
+    """Roda a sequencia inteira, anunciando cada etapa e dizendo onde parou.
+
+    Motivo desta funcao ser tao verbosa: instalar e uma fila de passos e, quando
+    um falha, a pessoa precisa saber DUAS coisas — em qual passo parou e que
+    nada foi desfeito. Sem isso, o retorno ao menu parece "nao fez nada".
+    """
     titulo("Instalacao completa")
     explicar(
         "Motivo: fazer tudo na ordem certa, uma vez, sem esquecer etapa.",
-        "Vou parar no primeiro passo que falhar e dizer o que fazer — em vez de",
-        "acumular erro sobre erro.",
+        "Sao 6 etapas. Vou anunciar cada uma antes de comecar e, se alguma falhar,",
+        "digo exatamente onde parei — em vez de acumular erro sobre erro.",
     )
 
-    # Cada condicionante devolve False e ja explicou o motivo.
-    if not verificar_pre_requisitos():
-        return
-    if not criar_env():
+    concluidas = []
+
+    def interromper(numero: str, descricao: str) -> None:
+        """Anuncia a interrupcao, lista o que deu certo e o proximo passo."""
+        print("")
+        erro("INSTALACAO INTERROMPIDA na etapa " + numero + " (" + descricao + ").")
+        if concluidas:
+            explicar("  Ja deu certo antes disso:")
+            for item in concluidas:
+                print("    - " + item)
+        else:
+            explicar("  Nenhuma etapa foi concluida ainda.")
+        explicar("  Nada foi desfeito: containers, arquivos e dados continuam como estavam.")
+        o_que_fazer("resolva o problema mostrado acima e rode a opcao 8 de novo.",
+                    "a instalacao pode ser repetida: nada duplica.")
+
+    def etapa(numero: str, descricao: str, acao) -> bool:
+        """Anuncia a etapa, executa e reporta o resultado. Devolve se deu certo."""
+        print("")
+        print("  ---------------- etapa " + numero + ": " + descricao + " ----------------")
+        try:
+            certo = bool(acao())
+        except Exception as falha:  # rede de seguranca por etapa
+            erro("erro inesperado nesta etapa: " + type(falha).__name__ + " - " + str(falha))
+            certo = False
+        if certo:
+            concluidas.append("etapa " + numero + ": " + descricao)
+        return certo
+
+    if not etapa("1/6", "verificar os pre-requisitos", verificar_pre_requisitos):
+        interromper("1/6", "pre-requisitos")
         return
 
-    banco = escolher_banco()
-    if not subir_banco(banco):
+    if not etapa("2/6", "criar o arquivo .env", criar_env):
+        interromper("2/6", "arquivo .env")
         return
-    if not carregar_dados(banco):
+
+    banco = "postgres"
+    print("")
+    print("  ---------------- etapa 3/6: escolher o banco ----------------")
+    banco = escolher_banco()
+    concluidas.append("etapa 3/6: banco escolhido (" + banco + ")")
+
+    if not etapa("4/6", "subir o banco", lambda: subir_banco(banco)):
+        interromper("4/6", "subir o banco (" + banco + ")")
+        return
+
+    if not etapa("5/6", "criar a tabela e carregar os dados", lambda: carregar_dados(banco)):
+        interromper("5/6", "carga dos dados")
         return
 
     if banco == "postgres":
-        if not subir_api():
-            return
-        if not testar_endpoints():
+        if not etapa("6/6", "subir a API e testar os endpoints",
+                     lambda: subir_api() and testar_endpoints()):
+            interromper("6/6", "API / endpoints")
             return
     else:
-        aviso("instalacao do banco MySQL concluida; a API nao entra neste modo.")
+        aviso("banco MySQL instalado; a API nao entra neste modo (ela le do PostgreSQL).")
 
+    print("")
+    ok("as 6 etapas terminaram sem erro.")
     resumo()
 
 

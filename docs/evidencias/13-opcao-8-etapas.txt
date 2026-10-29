@@ -1,0 +1,44 @@
+Teste 5 - opcao 8 (instalar tudo) anuncia as etapas
+A instalacao completa numera as 6 etapas e, ao falhar, diz em qual parou, o que ja deu certo e que nada foi desfeito. (entrada: 8, depois 0)
+
+>>> executando a opcao 8 ...
+
+================================================================
+Instalacao completa
+================================================================
+  Motivo: fazer tudo na ordem certa, uma vez, sem esquecer etapa.
+  Sao 6 etapas. Vou anunciar cada uma antes de comecar e, se alguma falhar,
+  digo exatamente onde parei — em vez de acumular erro sobre erro.
+
+  ---------------- etapa 1/6: verificar os pre-requisitos ----------------
+
+================================================================
+Verificacao dos pre-requisitos
+================================================================
+  Motivo: instalar sem conferir a base e a receita para um erro confuso
+  mais adiante ('o container nao sobe' sem dizer por que).
+  
+  Vou conferir tres coisas:
+    1) a versao do Python (o projeto precisa de 3.8 ou mais novo);
+    2) se o Docker esta instalado (ele roda o banco e a API);
+    3) se o comando 'docker compose' responde (e ele que le o .yml).
+  [ok] Python 3.14.6 (minimo 3.8)
+  [erro] o comando 'docker' nao foi encontrado.
+  O Docker e o programa que cria os containers (as 'caixas' com o banco
+  e com a API dentro). Sem ele, nada sobe por este instalador.
+  
+  Como instalar no seu sistema (Windows):
+    Windows: baixe o 'Docker Desktop' em https://docs.docker.com/desktop/
+    Depois de instalar, ABRA o Docker Desktop e espere o icone ficar verde.
+    Reinicie o terminal para o comando 'docker' aparecer.
+
+  [erro] verificacao interrompida: 1 problema(s) encontrado(s).
+         -> resolva o item acima e rode a verificacao de novo.
+
+  [erro] INSTALACAO INTERROMPIDA na etapa 1/6 (pre-requisitos).
+    Nenhuma etapa foi concluida ainda.
+    Nada foi desfeito: containers, arquivos e dados continuam como estavam.
+         -> resolva o problema mostrado acima e rode a opcao 8 de novo.
+         -> a instalacao pode ser repetida: nada duplica.
+
+================================================================
