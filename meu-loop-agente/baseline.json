@@ -1,23 +1,31 @@
 {
-  "valor_inicial": null,
-  "melhor_valor": null,
-  "meta_percentual": 8.0,
+  "valor_inicial": 0,
+  "melhor_valor": 563.0,
+  "meta_absoluta": 563,
+  "meta_percentual": null,
   "progresso": {
-    "iteracao_atual": 0,
-    "aceitos": 0,
+    "iteracao_atual": 1,
+    "aceitos": 1,
     "rejeitados": 0,
     "rejeicoes_consecutivas": 0
   },
-  "historico_de_aceites": [],
-  "atualizado_em": null
-}
-{
-  "data": "2026-10-29",
+  "historico_de_aceites": [
+    {
+      "iteracao": 1,
+      "hipotese": "Converter a serie 433 do BCB em seed.sql com 563 linhas prontas para carga (561 reais + 2 ficticias de 2099)",
+      "valor": 563.0,
+      "variacao_percentual": 0.0,
+      "data": "2026-10-29T17:27:01Z"
+    }
+  ],
+  "atualizado_em": "2026-10-29T17:27:01Z",
   "estado_inicial": {
+    "data": "2026-10-29",
     "banco_existe": false,
     "tabela_existe": false,
     "api_existe": false,
-    "endpoints_funcionando": 0
-  },
-  "observacao": "Foto do estado antes de qualquer mudança. Serve para comparar depois."
+    "endpoints_funcionando": 0,
+    "linhas_prontas_no_seed": 0,
+    "observacao": "Foto do estado antes de qualquer mudanca. Serve para comparar depois."
+  }
 }

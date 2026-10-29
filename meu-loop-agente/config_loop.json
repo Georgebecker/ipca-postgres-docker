@@ -7,34 +7,31 @@
   "verificacao": {
     "diretorio_de_trabalho": "workspace",
     "comandos": [
-      "npm run lint",
-      "npm run typecheck",
-      "npm run test",
-      "npm run build"
+      "python -m py_compile scripts/baixar_dados.py scripts/gerar_seed.py"
     ],
     "parar_no_primeiro_erro": true,
     "timeout_segundos": 900
   },
   "metrica": {
-    "nome": "Tamanho do bundle inicial da homepage",
-    "unidade": "kB",
-    "direcao": "menor_melhor",
-    "comando": "npm run analyze",
-    "regex": "First Load JS shared by all\\s+([0-9]+(?:[.,][0-9]+)?)\\s*kB",
+    "nome": "Linhas prontas para carga (seed.sql)",
+    "unidade": "linhas",
+    "direcao": "maior_melhor",
+    "comando": "python scripts/gerar_seed.py",
+    "regex": "linhas totais\\s*:\\s*([0-9]+)",
     "grupo": 1
   },
   "limites": {
     "max_iteracoes": 20,
     "rejeicoes_consecutivas": 5
+  },
+  "projeto": {
+    "nome": "ipca-postgres-docker",
+    "degrau": 1,
+    "apelido": "Termometro",
+    "workspace": "workspace/",
+    "log": "meu-loop-agente/log.md",
+    "baseline": "meu-loop-agente/baseline.json",
+    "verificador": "meu-loop-agente/verificar_iteracao.py",
+    "system_prompt": "meu-loop-agente/system_prompt.md"
   }
-}
-{
-  "projeto": "ipca-postgres-docker",
-  "degrau": 1,
-  "apelido": "Termometro",
-  "workspace": "workspace/",
-  "log": "meu-loop-agente/log.md",
-  "baseline": "meu-loop-agente/baseline.json",
-  "verificador": "meu-loop-agente/verificar_iteracao.py",
-  "system_prompt": "meu-loop-agente/system_prompt.md"
 }

@@ -1,0 +1,8 @@
+$ python scripts/gerar_seed.py
+
+[ok] meu-loop-agente\workspace\db\seed.sql gerado
+     linhas totais   : 563
+     linhas reais    : 561
+     linhas ficticias: 2 (ano 2099)
+     linhas ignoradas: 0
+     periodo         : 1980-01-01 a 2026-09-01

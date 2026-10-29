@@ -62,30 +62,62 @@ API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada
 ## Onde esta técnica aparece no projeto final
 No Encurtador, o PostgreSQL guarda os links e as campanhas; a modelagem aprendida aqui é a mesma usada lá.
 
-## Como rodar
-Em construção. Será preenchido nos Dias 2 e 3.
-
 ## Estrutura de pastas
-- `.githooks/` — ganchos de proteção.
-- `docs/` — documentos do projeto.
+- `.githooks/` — ganchos que bloqueiam segredo no commit e no push.
+- `docs/` — regras do projeto e guia da base.
 - `meu-loop-agente/` — contrato, config, baseline, log, verificador e system prompt.
-- `workspace/` — código da aplicação (única pasta onde o agente atua).
-- `data/raw/` — dados brutos do BCB.
-- `data/processed/` — dados tratados.
+- `meu-loop-agente/workspace/` — única pasta onde o agente atua.
+- `meu-loop-agente/workspace/db/` — `init.sql` (modelagem), `seed.sql` (carga) e `verificacao.sql`.
+- `meu-loop-agente/workspace/scripts/` — `baixar_dados.py` e `gerar_seed.py`.
+- `data/raw/` — o JSON original do Banco Central (não se edita).
+- `data/processed/` — dados tratados (ainda vazio).
+
 ## Como rodar
 
-O verificador usa **somente a biblioteca padrão** do Python — não há dependência para
-instalar ainda.
+Pré-requisitos: **Python 3.8+** (testado com 3.14.6) e **Docker com Compose**. Os
+scripts usam só a biblioteca padrão do Python — não há nada para instalar.
+
+**1. Configure o `.env`** (este arquivo não vai para o Git):
 
 ```powershell
-python --version                          # testado com 3.14.6 (mínimo 3.8)
-python meu-loop-agente\verificar_iteracao.py estado
+Copy-Item .env.example .env
+# edite POSTGRES_USER, POSTGRES_PASSWORD e POSTGRES_DB no seu .env
 ```
 
-Para abrir o projeto no VS Code:
+**2. Baixe a série do Banco Central e gere a carga:**
 
 ```powershell
-code --new-window D:\Projetos\ipca-postgres-docker
+python meu-loop-agente\workspace\scripts\baixar_dados.py
+python meu-loop-agente\workspace\scripts\gerar_seed.py
+```
+
+O primeiro grava `data/raw/ipca_433.json` (561 meses, de 1980 a 2026) sem sobrescrever
+um arquivo existente; o segundo escreve `meu-loop-agente/workspace/db/seed.sql`.
+
+**3. Suba o PostgreSQL 16:**
+
+```powershell
+docker compose up -d
+docker compose ps          # a coluna STATUS deve mostrar (healthy)
+```
+
+**4. Carregue os dados.** O `init.sql` roda sozinho na primeira subida do container; o
+seed é aplicado à mão (assim dá para recarregar quantas vezes quiser):
+
+```powershell
+Get-Content meu-loop-agente\workspace\db\seed.sql | docker compose exec -T postgres psql -U termometro -d termometro
+```
+
+**5. Confira** com as quatro consultas de `verificacao.sql`:
+
+```powershell
+Get-Content meu-loop-agente\workspace\db\verificacao.sql | docker compose exec -T postgres psql -U termometro -d termometro
+```
+
+**6. Veja o estado do loop:**
+
+```powershell
+python meu-loop-agente\verificar_iteracao.py estado
 ```
 
 ## 🚀 Convite à interação

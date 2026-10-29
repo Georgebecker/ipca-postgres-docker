@@ -1,18 +1,20 @@
-# Loop Program — redução do bundle inicial (exemplo com Next.js)
+# Contrato do Loop — Termômetro (Degrau 1)
 
 > Este arquivo é o CONTRATO do agente. Só o humano altera.
 > Os números ficam em `baseline.json`; comandos e medição, em `config_loop.json`.
 > Mantenha os três coerentes entre si.
 
-# Contrato do Loop — Termômetro (Degrau 1)
-
 ## Objetivo
 Construir uma API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada em PostgreSQL rodando em Docker.
 
 ## Métrica principal
-Número de endpoints funcionando corretamente na verificação manual.
-- Baseline: 0
-- Meta do degrau: 3 (/health, /ipca/ultimo, /ipca/serie)
+Progresso medido por número real (nunca estimado), em duas etapas do degrau:
+- **Dia 2 — carga de dados:** linhas prontas para carga no `seed.sql`; início 0, meta 563.
+  É o número que o verificador mede hoje (`config_loop.json` -> `metrica`).
+- **Dia 3 — API:** endpoints funcionando; início 0, meta 3 (/health, /ipca/ultimo, /ipca/serie).
+
+Observação: com a base em zero, a "melhoria percentual" sai 0,00% por definição. O que
+conta é o valor absoluto registrado no `log.md` e no `baseline.json`.
 
 ## Limites (o que o agente NÃO pode fazer neste degrau)
 - Não criar front-end.

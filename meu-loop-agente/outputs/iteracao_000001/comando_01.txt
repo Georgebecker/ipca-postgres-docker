@@ -1,0 +1,2 @@
+$ python -m py_compile scripts/baixar_dados.py scripts/gerar_seed.py
+
