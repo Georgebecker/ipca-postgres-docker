@@ -1,7 +1,7 @@
 {
   "valor_inicial": 0,
-  "melhor_valor": 563.0,
-  "meta_absoluta": 563,
+  "melhor_valor": 0,
+  "meta_absoluta": 3,
   "meta_percentual": null,
   "progresso": {
     "iteracao_atual": 1,

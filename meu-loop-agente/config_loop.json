@@ -7,17 +7,17 @@
   "verificacao": {
     "diretorio_de_trabalho": "workspace",
     "comandos": [
-      "python -m py_compile scripts/baixar_dados.py scripts/gerar_seed.py"
+      "python -m py_compile scripts/baixar_dados.py scripts/gerar_seed.py scripts/medir_endpoints.py api/app/config.py api/app/database.py api/app/models.py api/app/routes.py api/app/main.py"
     ],
     "parar_no_primeiro_erro": true,
     "timeout_segundos": 900
   },
   "metrica": {
-    "nome": "Linhas prontas para carga (seed.sql)",
-    "unidade": "linhas",
+    "nome": "Endpoints da API funcionando",
+    "unidade": "endpoints",
     "direcao": "maior_melhor",
-    "comando": "python scripts/gerar_seed.py",
-    "regex": "linhas totais\\s*:\\s*([0-9]+)",
+    "comando": "python scripts/medir_endpoints.py",
+    "regex": "endpoints ok\\s*:\\s*([0-9]+)",
     "grupo": 1
   },
   "limites": {

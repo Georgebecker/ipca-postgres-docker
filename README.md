@@ -68,7 +68,8 @@ No Encurtador, o PostgreSQL guarda os links e as campanhas; a modelagem aprendid
 - `meu-loop-agente/` — contrato, config, baseline, log, verificador e system prompt.
 - `meu-loop-agente/workspace/` — única pasta onde o agente atua.
 - `meu-loop-agente/workspace/db/` — `init.sql` (modelagem), `seed.sql` (carga) e `verificacao.sql`.
-- `meu-loop-agente/workspace/scripts/` — `baixar_dados.py` e `gerar_seed.py`.
+- `meu-loop-agente/workspace/scripts/` — `baixar_dados.py`, `gerar_seed.py` e `medir_endpoints.py`.
+- `meu-loop-agente/workspace/api/` — a API FastAPI (`app/`) e o `Dockerfile`.
 - `data/raw/` — o JSON original do Banco Central (não se edita).
 - `data/processed/` — dados tratados (ainda vazio).
 
@@ -94,12 +95,15 @@ python meu-loop-agente\workspace\scripts\gerar_seed.py
 O primeiro grava `data/raw/ipca_433.json` (561 meses, de 1980 a 2026) sem sobrescrever
 um arquivo existente; o segundo escreve `meu-loop-agente/workspace/db/seed.sql`.
 
-**3. Suba o PostgreSQL 16:**
+**3. Suba o banco e a API (juntos):**
 
 ```powershell
-docker compose up -d
-docker compose ps          # a coluna STATUS deve mostrar (healthy)
+docker compose up -d --build
+docker compose ps          # devem aparecer 2 containers: postgres (healthy) e api (healthy)
 ```
+
+A primeira subida constrói a imagem da API, o que leva alguns minutos (instala as
+dependências do `requirements.txt`).
 
 **4. Carregue os dados.** O `init.sql` roda sozinho na primeira subida do container; o
 seed é aplicado à mão (assim dá para recarregar quantas vezes quiser):
@@ -114,11 +118,35 @@ Get-Content meu-loop-agente\workspace\db\seed.sql | docker compose exec -T postg
 Get-Content meu-loop-agente\workspace\db\verificacao.sql | docker compose exec -T postgres psql -U termometro -d termometro
 ```
 
-**6. Veja o estado do loop:**
+**6. Teste os endpoints** (detalhes na seção [Endpoints](#endpoints)):
+
+```powershell
+curl http://localhost:8000/health
+curl http://localhost:8000/ipca/ultimo
+curl "http://localhost:8000/ipca/serie?tipo=real"
+```
+
+**7. Veja o estado do loop:**
 
 ```powershell
 python meu-loop-agente\verificar_iteracao.py estado
 ```
+
+## Endpoints
+
+Base: `http://localhost:8000` (ou a porta definida em `API_PORT` no `.env`).
+
+| Rota | O que devolve | Exemplo |
+|---|---|---|
+| `GET /health` | Prova de vida: pergunta a versão ao PostgreSQL antes de responder | `{"status":"ok","postgres":"ok","versao_postgres":"PostgreSQL 16.x ..."}` |
+| `GET /ipca/ultimo` | O registro de maior data | `{"data":"2099-02-01","valor":2.3456,"tipo":"ficticio"}` |
+| `GET /ipca/serie` | A série inteira, em ordem crescente de data | `[{"data":"1980-01-01","valor":6.62,"tipo":"real"}, ...]` |
+| `GET /ipca/serie?tipo=real` | Só os meses reais; o filtro aceita `real` ou `ficticio` | idem, sem os dois de 2099 |
+
+`/ipca/ultimo` devolve **2099-02-01** de propósito: os dois registros fictícios estão no
+ano 2099 e são, por definição, os mais recentes. É o teste de que a ordenação funciona.
+
+A documentação interativa do FastAPI (Swagger) fica em <http://localhost:8000/docs>.
 
 ## 🚀 Convite à interação
 
