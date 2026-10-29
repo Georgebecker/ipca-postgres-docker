@@ -1,5 +1,5 @@
 -- Seed da tabela ipca, gerado por workspace/scripts/gerar_seed.py.
--- Nao edite a mao: rode o script de novo se o raw mudar.
+-- Dialeto: postgres. Nao edite a mao: rode o script de novo se o raw mudar.
 --
 -- ON CONFLICT (data) DO NOTHING: se o mes ja existe, a linha e ignorada
 -- em vez de dar erro. Assim rodar este arquivo duas vezes nao duplica

@@ -101,6 +101,18 @@ recarregar os dados do zero é o que torna o projeto reproduzível.
 
 ## Como rodar
 
+### Modo rápido: o instalador
+
+```powershell
+python instalar.py
+```
+
+Um menu em português guia a instalação: confere o Docker, cria o `.env` perguntando a
+senha, sobe o banco, cria a tabela, carrega os dados, sobe a API e testa os 3 endpoints.
+A opção `8` faz tudo na ordem; a `9` desinstala explicando antes o que será apagado.
+
+### Modo manual
+
 Pré-requisitos: **Python 3.8+** (testado com 3.14.6) e **Docker com Compose**. Os
 scripts usam só a biblioteca padrão do Python — não há nada para instalar.
 
@@ -173,6 +185,20 @@ Base: `http://localhost:8000` (ou a porta definida em `API_PORT` no `.env`).
 ano 2099 e são, por definição, os mais recentes. É o teste de que a ordenação funciona.
 
 A documentação interativa do FastAPI (Swagger) fica em <http://localhost:8000/docs>.
+
+### Alternativa opcional: MySQL
+
+O projeto roda em PostgreSQL. Existe um **extra opcional** com MySQL 8, em arquivo
+separado para não atropelar o banco principal:
+
+```powershell
+docker compose -f docker-compose.mysql.yml up -d
+python meu-loop-agente\workspace\scripts\gerar_seed.py --dialeto mysql
+```
+
+O seed muda de dialeto porque o comando que ignora mês repetido tem nome diferente:
+`ON CONFLICT (data) DO NOTHING` no PostgreSQL e `ON DUPLICATE KEY UPDATE` no MySQL.
+A API **não** sobe com esse banco — ela lê do PostgreSQL.
 
 ## 🚀 Convite à interação
 

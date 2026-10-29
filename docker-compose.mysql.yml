@@ -1,0 +1,31 @@
+# Alternativa opcional ao PostgreSQL: sobe um MySQL 8 com o mesmo proposito.
+# Uso: docker compose -f docker-compose.mysql.yml up -d
+#
+# Este arquivo NAO substitui o docker-compose.yml. Ele e um "compose separado"
+# de proposito: assim subir o MySQL nunca atropela o banco principal do projeto.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: termometro-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # Volume proprio: os dados do MySQL nao se misturam com os do PostgreSQL.
+      - mysqldata:/var/lib/mysql
+      - ./meu-loop-agente/workspace/db/mysql/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      # mysqladmin ping responde "estou aceitando conexao?".
+      # CMD-SHELL (e nao CMD) porque so o shell expande $${MYSQL_ROOT_PASSWORD}:
+      # o $$ duplo faz o compose deixar a variavel para o container resolver.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  mysqldata:

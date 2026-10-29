@@ -19,6 +19,7 @@ Uso:
 Sem emojis de proposito: compatibilidade com o console do Windows.
 """
 
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -79,20 +80,40 @@ def montar_linhas(registros: list) -> tuple:
     return reais, ignorados
 
 
-def escrever_seed(linhas: list) -> None:
-    """Grava o arquivo SQL com um unico INSERT e ON CONFLICT (data) DO NOTHING."""
+def escrever_seed(linhas: list, dialeto: str = "postgres") -> None:
+    """Grava o arquivo SQL com um unico INSERT e a traducao do "nao duplique".
+
+    O comando que ignora linha repetida muda de nome conforme o banco:
+    - PostgreSQL: `ON CONFLICT (data) DO NOTHING`
+    - MySQL: `ON DUPLICATE KEY UPDATE data = data` (atualizar a data para ela
+      mesma nao muda nada, e e o jeito do MySQL de dizer "ja existe, ignore")
+    """
+    if dialeto == "mysql":
+        final = "ON DUPLICATE KEY UPDATE data = data;"
+        explicacao = (
+            "-- ON DUPLICATE KEY UPDATE data = data: se o mes ja existe, a linha e",
+            '-- ignorada em vez de dar erro (o jeito do MySQL de dizer "ja existe").',
+        )
+    else:
+        final = "ON CONFLICT (data) DO NOTHING;"
+        explicacao = (
+            "-- ON CONFLICT (data) DO NOTHING: se o mes ja existe, a linha e ignorada",
+            "-- em vez de dar erro. Assim rodar este arquivo duas vezes nao duplica",
+            "-- nada e nao derruba a carga no meio.",
+        )
+
     partes = [
         "-- Seed da tabela ipca, gerado por workspace/scripts/gerar_seed.py.",
-        "-- Nao edite a mao: rode o script de novo se o raw mudar.",
+        "-- Dialeto: " + dialeto + ". Nao edite a mao: rode o script de novo se o raw mudar.",
         "--",
-        "-- ON CONFLICT (data) DO NOTHING: se o mes ja existe, a linha e ignorada",
-        "-- em vez de dar erro. Assim rodar este arquivo duas vezes nao duplica",
-        "-- nada e nao derruba a carga no meio.",
+    ]
+    partes.extend(explicacao)
+    partes.extend([
         "",
         "BEGIN;",
         "",
         "INSERT INTO ipca (data, valor, tipo) VALUES",
-    ]
+    ])
 
     valores = ['    (%s, %s, %s)' % (
         "'" + data + "'",
@@ -102,7 +123,7 @@ def escrever_seed(linhas: list) -> None:
 
     corpo = ",\n".join(valores)
     partes.append(corpo)
-    partes.append("ON CONFLICT (data) DO NOTHING;")
+    partes.append(final)
     partes.append("")
     partes.append("COMMIT;")
     partes.append("")
@@ -113,6 +134,17 @@ def escrever_seed(linhas: list) -> None:
 
 def main() -> int:
     """Le o raw, monta a seed e grava seed.sql. Devolve 0 quando tudo correu bem."""
+    parser = argparse.ArgumentParser(
+        description="Gera o seed.sql a partir do raw do Banco Central."
+    )
+    parser.add_argument(
+        "--dialeto",
+        choices=["postgres", "mysql"],
+        default="postgres",
+        help="Banco de destino: postgres (padrao) ou mysql.",
+    )
+    argumentos = parser.parse_args()
+
     if not ARQ_RAW.exists():
         print("[erro] nao encontrei " + str(ARQ_RAW.relative_to(RAIZ_DO_PROJETO)) + ".")
         print("       Rode primeiro: python meu-loop-agente/workspace/scripts/baixar_dados.py")
@@ -136,9 +168,10 @@ def main() -> int:
 
     # Ficticios entram no fim da lista para ficarem legiveis no arquivo gerado.
     linhas = reais + [(data, valor, "ficticio") for data, valor in FICTICIOS]
-    escrever_seed(linhas)
+    escrever_seed(linhas, argumentos.dialeto)
 
-    print("[ok] " + str(ARQ_SEED.relative_to(RAIZ_DO_PROJETO)) + " gerado")
+    print("[ok] " + str(ARQ_SEED.relative_to(RAIZ_DO_PROJETO))
+          + " gerado (dialeto " + argumentos.dialeto + ")")
     print("     linhas totais   : " + str(len(linhas)))
     print("     linhas reais    : " + str(len(reais)))
     print("     linhas ficticias: " + str(len(FICTICIOS)) + " (ano 2099)")
