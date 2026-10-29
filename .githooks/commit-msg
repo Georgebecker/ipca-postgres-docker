@@ -1,0 +1,54 @@
+#!/bin/sh
+# ------------------------------------------------------------------
+# Gancho commit-msg — AUTORIA SEMPRE HUMANA
+#
+# Recusa a mensagem de commit que credita um modelo de IA como
+# coautor do projeto:
+#   1) trailer "Co-authored-by:" apontando para Copilot, Claude, GPT,
+#      Gemini, DeepSeek, Cursor, Codex, Ollama e afins (ou conta bot);
+#   2) rodapes "Assisted-by:" / "Generated-by:";
+#   3) "Generated with <modelo>" e o emoji de robo no rodape.
+#
+# Por que isso importa: o GitHub monta a lista de contribuidores a
+# partir de autoria e coautoria. Um trailer desses coloca a ferramenta
+# na lista — e a lista deve refletir pessoas.
+#
+# Para nao gerar o trailer na origem: no VS Code, mantenha
+# "git.addAICoAuthor": "off".
+#
+# Template: %USERPROFILE%\.copilot\templates\githooks\
+# ------------------------------------------------------------------
+
+MENSAGEM="$1"
+
+# Sem arquivo de mensagem nao ha o que analisar (ex.: merge automatico).
+if [ -z "$MENSAGEM" ] || [ ! -f "$MENSAGEM" ]; then
+    exit 0
+fi
+
+# Nomes de modelo/fornecedor que nunca assinam commit.
+MODELOS='copilot|chatgpt|openai|anthropic|claude|gemini|bard|deepseek|cursor|codex|windsurf|aider|devin|ollama|mistral|qwen|llama|\[bot\]|github-actions'
+
+# Linhas comentadas (#) sao descartadas pelo git: nao valem como trailer.
+linhas=$(grep -vE '^[[:space:]]*#' "$MENSAGEM" 2>/dev/null)
+
+ofensoras=$(printf '%s\n' "$linhas" | grep -inE \
+    "^[[:space:]]*(co-authored-by|assisted-by|generated-by)[[:space:]]*:.*($MODELOS)|generated with[[:space:]]+($MODELOS|ai|ia)|🤖.*(generated|copilot|claude|gpt|gemini|deepseek)")
+
+if [ -n "$ofensoras" ]; then
+    echo "" >&2
+    echo "BLOQUEADO: a mensagem credita um modelo de IA como autor." >&2
+    printf '%s\n' "$ofensoras" | sed 's/^/  -> linha /' >&2
+    echo "" >&2
+    echo "REGRA: autoria de commit e sempre humana. Nenhum modelo assina," >&2
+    echo "co-assina ou aparece como contribuidor do projeto." >&2
+    echo "" >&2
+    echo "Como corrigir: apague a linha do rodape e refaca o commit:" >&2
+    echo "  git commit --amend" >&2
+    echo "" >&2
+    echo "Para nao aparecer de novo: no VS Code, deixe git.addAICoAuthor = off." >&2
+    echo "" >&2
+    exit 1
+fi
+
+exit 0
