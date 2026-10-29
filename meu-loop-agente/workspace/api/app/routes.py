@@ -24,6 +24,21 @@ router = APIRouter()
 ERRO_BANCO = "o banco de dados nao respondeu; verifique se o container do PostgreSQL esta de pe"
 
 
+@router.get("/", include_in_schema=False)
+def raiz() -> dict:
+    """Página inicial: diz quais caminhos existem.
+
+    Sem esta rota, abrir http://localhost:8000/ devolve `{"detail":"Not Found"}`,
+    que parece defeito mas é só ausência de rota. Aqui ela responde a lista.
+    """
+    return {
+        "api": "Termometro - IPCA (SGS 433)",
+        "endpoints": ["/health", "/ipca/ultimo", "/ipca/serie"],
+        "filtro_opcional": "/ipca/serie?tipo=real",
+        "documentacao": "/docs",
+    }
+
+
 @router.get("/health")
 def health() -> dict:
     """Prova de vida: responde só depois de perguntar a versão ao PostgreSQL.
