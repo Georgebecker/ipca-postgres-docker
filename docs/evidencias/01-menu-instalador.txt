@@ -1,6 +1,5 @@
-Evidência 1 — o menu do instalador.
-Prova que o assistente lista as opções, informa o banco configurado e encerra
-pela opção 0. Comando: python instalar.py   (entrada: 0)
+Teste 1 - menu do instalador
+O menu aparece, informa o banco configurado e encerra pela opcao 0. Comando: python instalar.py (entrada: 0)
 
 ================================================================
 Instalador do Termometro (Degrau 1)

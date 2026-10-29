@@ -1,6 +1,5 @@
-Evidência 2 — a opção 1 confere os pré-requisitos.
-Prova que o instalador valida cada item, diz o motivo e, sem Docker, ensina a
-instalar por sistema operacional. Comando: python instalar.py   (entrada: 1, 0)
+Teste 2 - verificacao de pre-requisitos
+Confere Python, Docker e Compose. Sem Docker, explica como instalar por sistema operacional. Comando: python instalar.py (entrada: 1, depois 0)
 
 ================================================================
 Instalador do Termometro (Degrau 1)

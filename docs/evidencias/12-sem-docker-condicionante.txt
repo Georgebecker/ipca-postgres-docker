@@ -1,7 +1,5 @@
-Evidência 8 — condicionante do Docker na opção 4 (subir o banco).
-Prova as três partes exigidas: a condição que falhou, o motivo dela e o que
-fazer agora. O fluxo para sem tentar rodar comando impossível.
-Comando: python instalar.py   (entrada: 4, depois 0)
+Teste 4 - condicionante do Docker (opcao 4)
+A opcao 'subir o banco' confere o Docker antes de agir e mostra as tres partes: a condicao que falhou, o motivo e o proximo passo. (entrada: 4, depois 0)
 
 >>> executando a opcao 4 ...
 

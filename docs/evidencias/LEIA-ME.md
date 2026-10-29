@@ -38,7 +38,11 @@ com o mesmo padrão de legenda:
 
 ## Sobre imagens (`.png`)
 
-A seção de capturas do projeto limita a **5 imagens por projeto** e proíbe exponenciar
-dados pessoais. Este projeto é de terminal, sem interface gráfica: a saída em `.txt` prova
-mais do que um print (dá para copiar, comparar e versionar sem ruído). Se um dia houver
-tela, as regras de captura valem normalmente.
+As imagens ficam em [`docs/img/`](../img/), com a legenda de cada uma em
+[`LOG-IMAGENS.md`](../img/LOG-IMAGENS.md). Elas são **desenhadas a partir da saída real**
+do programa, capturada no terminal — não são fotografias da tela. O conteúdo é fiel; o
+enquadramento é feito por código, porque os comandos rodam em segundo plano e não há
+janela de terminal para fotografar no momento da execução.
+
+Um print real da tela pode ser tirado a qualquer momento: o log traz a coluna **Como
+reproduzir** com o comando e a entrada exata de cada caso.

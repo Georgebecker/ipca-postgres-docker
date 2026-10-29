@@ -240,6 +240,25 @@ O que este projeto **não** faz — de propósito, por escopo do degrau:
 - **Uma única série (433).** Não há comparação com outras séries, nem tratamento da
   mudança de metodologia do IPCA em 1999.
 
+## Evidências
+
+Saídas reais do programa, capturadas em 29/10/2026. As imagens são desenhadas a
+partir do texto real (não são fotografias da tela) — a ressalva e o comando de cada uma
+estão em [`docs/img/LOG-IMAGENS.md`](docs/img/LOG-IMAGENS.md).
+
+![Menu do instalador com as 10 opções e o banco configurado](docs/img/01-menu-instalador.png)
+
+*O menu do instalador: cada opção tem descrição, o banco atual aparece no cabeçalho e a
+opção `0` encerra.*
+
+![Erro do instalador quando o Docker não existe, com motivo e próximo passo](docs/img/12-sem-docker-condicionante.png)
+
+*A condicionante do Docker: o fluxo para antes de tentar rodar comando impossível e diz o
+motivo e o que fazer agora.*
+
+As demais (`02-pre-requisitos.png` e `11-opcao-invalida.png`) estão em
+[`docs/img/`](docs/img/), com a legenda no mesmo log.
+
 ## Apoie o autor
 
 - **PIX:** `a8b68e14-edfe-4450-88f2-c2af4aca2a6c`
