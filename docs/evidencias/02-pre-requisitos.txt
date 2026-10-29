@@ -1,13 +1,12 @@
-Evidência 2 — a opcao 1 confere os pre-requisitos.
-Prova que o instalador detecta o Python correto e avisa, com instrucoes por
-sistema operacional, quando o Docker nao esta instalado (caso desta maquina).
-Comando: python instalar.py   (entrada: 1, depois 0)
+Evidência 2 — a opção 1 confere os pré-requisitos.
+Prova que o instalador valida cada item, diz o motivo e, sem Docker, ensina a
+instalar por sistema operacional. Comando: python instalar.py   (entrada: 1, 0)
 
 ================================================================
 Instalador do Termometro (Degrau 1)
 ================================================================
-  Escolha o numero da acao. Cada acao explica o que faz antes de agir.
-  Banco configurado agora: postgres
+  Escolha o numero da acao. Cada acao diz o motivo e confere o que precisa
+  antes de agir. Banco configurado agora: postgres
 
   1) Verificar os pre-requisitos (Docker, Python, Compose)
   2) Criar/atualizar o arquivo .env
@@ -20,10 +19,15 @@ Instalador do Termometro (Degrau 1)
   9) Desinstalar (parar containers e, se quiser, apagar dados)
   0) Sair
   Opcao [0]: 
+  >>> executando a opcao 1 ...
+
 ================================================================
 Verificacao dos pre-requisitos
 ================================================================
-  Vou conferir tres coisas antes de qualquer instalacao:
+  Motivo: instalar sem conferir a base e a receita para um erro confuso
+  mais adiante ('o container nao sobe' sem dizer por que).
+  
+  Vou conferir tres coisas:
     1) a versao do Python (o projeto precisa de 3.8 ou mais novo);
     2) se o Docker esta instalado (ele roda o banco e a API);
     3) se o comando 'docker compose' responde (e ele que le o .yml).
@@ -36,14 +40,15 @@ Verificacao dos pre-requisitos
     Windows: baixe o 'Docker Desktop' em https://docs.docker.com/desktop/
     Depois de instalar, ABRA o Docker Desktop e espere o icone ficar verde.
     Reinicie o terminal para o comando 'docker' aparecer.
-  
-  Depois de instalar, rode este instalador de novo.
+
+  [erro] verificacao interrompida: 1 problema(s) encontrado(s).
+         -> resolva o item acima e rode a verificacao de novo.
 
 ================================================================
 Instalador do Termometro (Degrau 1)
 ================================================================
-  Escolha o numero da acao. Cada acao explica o que faz antes de agir.
-  Banco configurado agora: postgres
+  Escolha o numero da acao. Cada acao diz o motivo e confere o que precisa
+  antes de agir. Banco configurado agora: postgres
 
   1) Verificar os pre-requisitos (Docker, Python, Compose)
   2) Criar/atualizar o arquivo .env

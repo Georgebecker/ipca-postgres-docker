@@ -1,0 +1,24 @@
+Evidência 8 — condicionante do Docker na opção 4 (subir o banco).
+Prova as três partes exigidas: a condição que falhou, o motivo dela e o que
+fazer agora. O fluxo para sem tentar rodar comando impossível.
+Comando: python instalar.py   (entrada: 4, depois 0)
+
+>>> executando a opcao 4 ...
+
+================================================================
+Subindo o banco (postgres)
+================================================================
+  Motivo: sem o banco no ar, nao ha onde criar a tabela nem carregar os dados.
+  Na primeira vez o Docker baixa a imagem (pode demorar alguns minutos).
+  [erro] nao posso continuar: o Docker nao foi encontrado.
+    Motivo: o banco roda dentro de um container.
+  O Docker e o programa que cria os containers (as 'caixas' com o banco
+  e com a API dentro). Sem ele, nada sobe por este instalador.
+  
+  Como instalar no seu sistema (Windows):
+    Windows: baixe o 'Docker Desktop' em https://docs.docker.com/desktop/
+    Depois de instalar, ABRA o Docker Desktop e espere o icone ficar verde.
+    Reinicie o terminal para o comando 'docker' aparecer.
+         -> instale o Docker, reinicie o terminal e rode o instalador de novo.
+
+================================================================

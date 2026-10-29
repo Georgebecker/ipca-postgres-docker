@@ -1,12 +1,12 @@
-Evidência 1 — o menu do instalador aparece ao rodar 'python instalar.py'.
-Prova que o assistente existe, lista as 10 opções e sai pela opcao 0.
-Comando: python instalar.py   (entrada: 0)
+Evidência 1 — o menu do instalador.
+Prova que o assistente lista as opções, informa o banco configurado e encerra
+pela opção 0. Comando: python instalar.py   (entrada: 0)
 
 ================================================================
 Instalador do Termometro (Degrau 1)
 ================================================================
-  Escolha o numero da acao. Cada acao explica o que faz antes de agir.
-  Banco configurado agora: postgres
+  Escolha o numero da acao. Cada acao diz o motivo e confere o que precisa
+  antes de agir. Banco configurado agora: postgres
 
   1) Verificar os pre-requisitos (Docker, Python, Compose)
   2) Criar/atualizar o arquivo .env

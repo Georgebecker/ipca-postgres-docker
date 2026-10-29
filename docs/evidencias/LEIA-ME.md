@@ -17,6 +17,8 @@ gerou e a entrada digitada. O resto é a saída, copiada sem edição.
 | `04-gerar-seed-mysql.txt` | O mesmo seed no dialeto MySQL, terminando em `ON DUPLICATE KEY UPDATE` | `python .../gerar_seed.py --dialeto mysql` |
 | `09-menu-config.txt` | A central de operação existe, com 9 opções descritivas, e encerra limpo | `python meu-loop-agente/workspace/config.py` (entrada `0`) |
 | `10-estado-sem-docker.txt` | O menu **não quebra** sem Docker: avisa, diz o que não conseguiu consultar e segue | `python meu-loop-agente/workspace/config.py` (entrada `7`, depois `0`) |
+| `11-opcao-invalida.txt` | Resposta inválida é explicada (o que foi recusado, o que é aceito, qual é o padrão) | `python instalar.py` (entrada `x`, depois `0`) |
+| `12-sem-docker-condicionante.txt` | A condicionante do Docker mostra **condição + motivo + o que fazer agora** | `python instalar.py` (entrada `4`, depois `0`) |
 
 Todas foram geradas na máquina de desenvolvimento, **sem Docker**, porque nenhuma delas
 precisa de container.

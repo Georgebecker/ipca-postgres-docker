@@ -1,0 +1,9 @@
+Evidência 7 — resposta inválida no menu.
+Prova que o programa explica por que a opção foi recusada, lista o que é
+aceito e mostra o padrão, em vez de ignorar a digitação. Comando: python instalar.py
+(entrada: x, depois 0)
+
+Opcao [0]:   [erro] opcao invalida: 'x'.
+         -> opcoes aceitas: 1, 2, 3, 4, 5, 6, 7, 8, 9, 0.
+         -> aperte Enter para usar o padrao (0).
+  Opcao [0]:
