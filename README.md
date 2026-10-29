@@ -51,7 +51,27 @@ ipca-postgres-docker/
 ├── README.md
 └── requirements.txt
 ```
+# ipca-postgres-docker (Termômetro)
 
+## O que é
+API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada em PostgreSQL rodando em Docker.
+
+## Por que existe
+É o Degrau 1 de uma trilha de 5 projetos pequenos que, juntos, formam as peças de um projeto final chamado "Encurtador de Links". Este degrau treina modelagem de banco relacional, Docker e seed.
+
+## Onde esta técnica aparece no projeto final
+No Encurtador, o PostgreSQL guarda os links e as campanhas; a modelagem aprendida aqui é a mesma usada lá.
+
+## Como rodar
+Em construção. Será preenchido nos Dias 2 e 3.
+
+## Estrutura de pastas
+- `.githooks/` — ganchos de proteção.
+- `docs/` — documentos do projeto.
+- `meu-loop-agente/` — contrato, config, baseline, log, verificador e system prompt.
+- `workspace/` — código da aplicação (única pasta onde o agente atua).
+- `data/raw/` — dados brutos do BCB.
+- `data/processed/` — dados tratados.
 ## Como rodar
 
 O verificador usa **somente a biblioteca padrão** do Python — não há dependência para

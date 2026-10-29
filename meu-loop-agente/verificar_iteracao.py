@@ -64,16 +64,56 @@ def info(mensagem: str) -> None:
     print(mensagem)
 
 
+def localizar_segundo_documento(texto: str) -> int:
+    """Devolve onde começa um SEGUNDO objeto JSON no texto, ou -1 se houver só um.
+
+    Existe para trocar o erro seco "Extra data" por um aviso que aponte a linha.
+    O caso real: alguém cola um bloco novo em cima da configuração antiga e o
+    arquivo fica com dois objetos, um atrás do outro — como duas folhas de papel
+    coladas na mesma página. O JSON só lê a primeira folha; a segunda sobra e
+    vira "Extra data" sem dizer onde está.
+    """
+    decodificador = json.JSONDecoder()
+    inicio = len(texto) - len(texto.lstrip())  # pula espaços/quebras do começo
+    try:
+        _, fim_do_primeiro = decodificador.raw_decode(texto, inicio)
+    except json.JSONDecodeError:
+        return -1  # nem o primeiro objeto está válido: não é o caso "dois colados"
+
+    posicao = fim_do_primeiro
+    while posicao < len(texto) and texto[posicao].isspace():
+        posicao += 1
+    return posicao if posicao < len(texto) else -1
+
+
 def carregar_json(caminho: Path, rotulo: str) -> dict:
+    """Lê um arquivo JSON do loop e traduz erro de formato em instrução de conserto.
+
+    Entra um caminho e um rótulo ("configuração de máquina do Loop"); sai o dicionário
+    já convertido. Existe para que quem roda o verificador entenda o problema sem
+    abrir o arquivo linha por linha: a mensagem diz o que houve, onde e o que fazer.
+    """
     if not caminho.exists():
         falhar("não encontrei o arquivo " + caminho.name + " (" + rotulo + ").", 1)
 
+    texto = caminho.read_text(encoding="utf-8")
     try:
-        return json.loads(caminho.read_text(encoding="utf-8"))
+        return json.loads(texto)
     except json.JSONDecodeError as erro:
+        colado = localizar_segundo_documento(texto)
+        if colado != -1:
+            linha_do_colado = texto.count("\n", 0, colado) + 1
+            falhar(
+                "o arquivo " + caminho.name + " tem mais de um objeto JSON: um segundo"
+                " bloco começa na linha " + str(linha_do_colado) + ". Isso acontece"
+                " quando um bloco novo é colado sobre o original. Deixe apenas um"
+                " objeto (ou junte as chaves em um só) e rode de novo.",
+                1,
+            )
         falhar(
-            "o arquivo " + caminho.name + " tem um erro de formato na linha "
-            + str(erro.lineno) + ": " + erro.msg,
+            "o arquivo " + caminho.name + " (" + rotulo + ") tem um erro de formato na"
+            " linha " + str(erro.lineno) + ": " + erro.msg
+            + ". Confira vírgula sobrando, aspas e chaves de fechamento.",
             1,
         )
 

@@ -28,3 +28,13 @@
     "rejeicoes_consecutivas": 5
   }
 }
+{
+  "projeto": "ipca-postgres-docker",
+  "degrau": 1,
+  "apelido": "Termometro",
+  "workspace": "workspace/",
+  "log": "meu-loop-agente/log.md",
+  "baseline": "meu-loop-agente/baseline.json",
+  "verificador": "meu-loop-agente/verificar_iteracao.py",
+  "system_prompt": "meu-loop-agente/system_prompt.md"
+}

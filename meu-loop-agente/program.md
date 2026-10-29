@@ -4,66 +4,33 @@
 > Os números ficam em `baseline.json`; comandos e medição, em `config_loop.json`.
 > Mantenha os três coerentes entre si.
 
-## OBJETIVO
+# Contrato do Loop — Termômetro (Degrau 1)
 
-Reduzir o tamanho do bundle inicial da homepage em pelo menos 8%, sem quebrar
-funcionalidades críticas.
+## Objetivo
+Construir uma API que consulta a série histórica do IPCA (SGS 433, Banco Central) armazenada em PostgreSQL rodando em Docker.
 
-## BASELINE E META
+## Métrica principal
+Número de endpoints funcionando corretamente na verificação manual.
+- Baseline: 0
+- Meta do degrau: 3 (/health, /ipca/ultimo, /ipca/serie)
 
-- Fonte dos números: `baseline.json` (valor inicial, melhor valor, meta).
-- Meta de exemplo: 312 kB -> 287 kB (redução de 8%).
+## Limites (o que o agente NÃO pode fazer neste degrau)
+- Não criar front-end.
+- Não criar testes automatizados.
+- Não configurar CI/CD.
+- Não usar MongoDB nem Redis.
+- Não fazer deploy em servidor.
+- Não usar código de outros projetos (api-cep-valida, bot-indicadores).
+- Só atuar dentro de `workspace/`.
 
-## ARQUIVOS PERMITIDOS (o agente só mexe aqui)
+## Critérios de aceite do Degrau 1
+1. Repositório público `ipca-postgres-docker`.
+2. `docker-compose.yml` sobe PostgreSQL com um comando.
+3. Tabela `ipca` criada e populada (dados reais + fictícios).
+4. Scripts SQL versionados em `workspace/db/`.
+5. API responde em /health, /ipca/ultimo e /ipca/serie.
+6. Ciclo registrado em `log.md` com decisão ACEITO.
+7. README explica o projeto e onde a técnica aparece no projeto final.
 
-- `workspace/app/**`
-- `workspace/components/**`
-- `workspace/lib/**`
-- `workspace/package.json`
-
-## ARQUIVOS PROIBIDOS
-
-- `infra/**`
-- `scripts/deploy/**`
-- `.github/workflows/**`
-- `.env`, segredos, credenciais
-- Qualquer caminho fora de `workspace/`
-
-## COMANDOS DE VERIFICAÇÃO (obrigatórios)
-
-- Fonte de máquina: `config_loop.json` -> `verificacao.comandos` (não duplicar aqui, para não divergir).
-- Conteúdo atual (exemplo): `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-
-## MÉTRICA PRINCIPAL
-
-- Nome: tamanho do bundle inicial da homepage (kB).
-- Direção: menor é melhor.
-- Comando e leitura do número: `config_loop.json` -> `metrica`.
-
-## MÉTRICAS SECUNDÁRIAS (não podem piorar)
-
-- Tamanho do vendor chunk.
-- Regressão visual zero nas telas críticas.
-
-## CRITÉRIO DE ACEITE
-
-- Todos os comandos de verificação passam; E
-- A métrica principal melhora (menor que o melhor valor registrado).
-
-## CRITÉRIO DE REJEIÇÃO
-
-- Qualquer comando falha; OU
-- A métrica fica igual ou pior.
-
-## POLÍTICA DE MUDANÇA
-
-- Uma hipótese por iteração.
-- Diff pequeno (menos de 50 linhas).
-- Reverter imediatamente o que for rejeitado.
-- Registrar cada iteração no `log.md` (hipótese, arquivos, métricas, decisão).
-
-## LIMITES DE PARADA
-
-- Máximo: 20 iterações (fonte de máquina: `config_loop.json` -> `limites`).
-- Parada antecipada: meta atingida OU 5 rejeições consecutivas OU falta de
-  hipóteses plausíveis.
+## Regra de iteração
+Cada ciclo: hipótese → UMA mudança pequena → teste → medição → decisão → registro no log.

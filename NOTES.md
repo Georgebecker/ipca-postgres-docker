@@ -14,3 +14,25 @@
 - `meu-loop-agente/program.md` e `config_loop.json` seguem o exemplo Next.js da base
   (métrica de tamanho de bundle). São arquivos do humano e precisam da métrica real do
   projeto antes do primeiro ciclo.
+
+## 2026-10-29 — divergência da base sinalizada (7 arquivos com bloco colado)
+
+- Auditoria de estrutura e `.md`: **7 arquivos ficaram com dois documentos dentro de um**,
+  porque um bloco novo foi colado por cima do original em vez de substituí-lo —
+  `README.md`, `docs/REGRAS_DE_OURO.md`, `meu-loop-agente/{program.md, config_loop.json,
+  baseline.json, log.md, system_prompt.md}`. Nada foi perdido: as alterações estão no
+  working tree, ainda não commitadas, e o `HEAD` guarda a base íntegra.
+- **Bloqueio que era mudo:** `config_loop.json` e `baseline.json` terminaram com dois
+  objetos JSON. O verificador parava com `Extra data`, sem dizer onde — quem tentasse
+  rodar o loop concluiria que a ferramenta estava com defeito.
+- **Corrigido nesta sessão (só a sinalização):** `verificar_iteracao.py` agora detecta
+  mais de um objeto JSON no arquivo e diz em que linha o segundo bloco começa, além de
+  sugerir o conserto. Mudança localizada em `carregar_json` e no novo
+  `localizar_segundo_documento`. _Divergência de propósito em relação ao
+  `projeto_loop`_ — a base mostra o erro cru; aqui a mensagem ensina.
+- **Pendências (decisão do dono: não corrigir agora):** desduplicar os 7 arquivos,
+  restaurar as Partes I–IV de `docs/REGRAS_DE_OURO.md` e trocar a métrica de bundle pelos
+  comandos reais do projeto. Enquanto isso, `estado`, `medir` e `verificar` continuam
+  parando com código 1 — de propósito, para não medir a métrica errada.
+- **Métrica do Degrau 1 definida pelo dono:** endpoints funcionando, 0 → 3
+  (`/health`, `/ipca/ultimo`, `/ipca/serie`). É meta absoluta, não percentual.

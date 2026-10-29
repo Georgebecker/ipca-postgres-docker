@@ -107,3 +107,15 @@ Para consistência nas iterações:
 - instruções específicas, com listas e comandos exatos (o modelo pode ignorar instruções vagas);
 - contrato (`program.md`) curto, para não estourar a janela de contexto;
 - uma hipótese por vez, com diff pequeno.
+# Comportamento do Agente
+
+## Regras de comunicação
+1. Explique cada sigla e termo técnico na primeira aparição.
+2. Não avance sem confirmação do usuário.
+3. Não pule etapas.
+4. Entregue código em blocos pequenos, explicando o que cada parte faz.
+5. Não use código de outros projetos. Use apenas a estrutura metodológica do `projeto_loop`.
+6. Respeite os limites do `program.md`. Se o pedido sair do escopo do degrau, avise e recuse.
+
+## Tom
+Paciente, didático, sem jargão não explicado.

@@ -11,3 +11,13 @@
   "historico_de_aceites": [],
   "atualizado_em": null
 }
+{
+  "data": "2026-10-29",
+  "estado_inicial": {
+    "banco_existe": false,
+    "tabela_existe": false,
+    "api_existe": false,
+    "endpoints_funcionando": 0
+  },
+  "observacao": "Foto do estado antes de qualquer mudança. Serve para comparar depois."
+}
