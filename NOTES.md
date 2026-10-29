@@ -15,6 +15,22 @@
   (métrica de tamanho de bundle). São arquivos do humano e precisam da métrica real do
   projeto antes do primeiro ciclo.
 
+## 2026-10-29 — Neon no lugar do PostgreSQL em Docker (contorno)
+
+- O **Docker Desktop não funcionou no Windows 11** desta máquina, apesar da configuração
+  atender aos requisitos (virtualização e WSL 2). Houve conflito na instalação e o comando
+  `docker` não ficou disponível.
+- Para não travar o degrau, a solução foi **Neon** (PostgreSQL gerenciado, plano gratuito):
+  projeto `ipca-postgres-docker`, organização `George H`, região São Paulo.
+- É **contorno temporário**, não mudança de arquitetura: `docker-compose.yml`, `init.sql`,
+  `Dockerfile` e `seed.sql` continuam versionados e válidos para quando o Docker voltar.
+- Decisão completa, com opções descartadas e critério de revisão, em
+  `docs/decisoes/0001-neon-em-vez-do-docker-local.md`. Evidência em
+  `docs/evidencias/14-neon-setup.txt`.
+- **Pendência criada por isso:** a API lê `POSTGRES_HOST/PORT/USER/PASSWORD/DB`, e o Neon
+  entrega `DATABASE_URL`. Enquanto a ponte não existir, os endpoints não conversam com o
+  Neon.
+
 ## 2026-10-29 — divergência da base sinalizada (7 arquivos com bloco colado)
 
 - Auditoria de estrutura e `.md`: **7 arquivos ficaram com dois documentos dentro de um**,

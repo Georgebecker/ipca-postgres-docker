@@ -1,0 +1,38 @@
+Evidência 9 — Neon configurado e respondendo (29/10/2026)
+
+Prova que: o CLI foi instalado, a sessão foi autenticada, o projeto foi criado na
+organização George H (plano Free, região São Paulo) e o banco responde a uma query.
+
+O que NÃO aparece aqui, de propósito: a connection string (contém a senha) e o
+e-mail da conta.
+
+$ neon --version
+8.13.2
+
+$ neon orgs list
+Organizations
+ID                           Name      Plan
+org-sparkling-moon-21159611  George H  Free
+
+$ neon projects list --org-id org-sparkling-moon-21159611
+Projects
+ID                  Name                            Region ID      Created At
+odd-dream-31897498  [current] ipca-postgres-docker  aws-sa-east-1  2026-10-29T19:28:56Z
+
+$ "select 'ok' as resposta, count(*) as tabelas from information_schema.tables where table_schema='public';" | neon psql
+Neon connection: neondb as neondb_owner on ep-gentle-tooth-b6141mgn.c-2.sa-east-1.aws.neon.tech; launching embedded psql (TypeScript)...
+ resposta | tabelas
+----------+---------
+ ok       |       0
+(1 row)
+
+O que o neon init fez no repositório:
+- .env ganhou DATABASE_URL, DATABASE_URL_UNPOOLED e NEON_BRANCH
+  (nenhuma chave existente foi removida)
+- .gitignore ganhou .neon e node_modules/
+- arquivos novos: neon.ts, package.json e package-lock.json
+- plugin "Neon Postgres" habilitado no VS Code (registrado em settings.json)
+- MCP: NÃO configurado (nenhum mcp.json no perfil do usuário nem no repositório)
+
+Observação: o banco do projeto está vazio (0 tabelas). O próximO passo é aplicar o
+init.sql e o seed.sql, como descrito em docs/decisoes/0001-neon-em-vez-do-docker-local.md.
