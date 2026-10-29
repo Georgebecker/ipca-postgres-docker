@@ -63,6 +63,7 @@ DIR_API = RAIZ / "meu-loop-agente" / "workspace" / "api"
 # ".neon" como ARQUIVO de configuracao, e tentar criar um arquivo "dentro" dele
 # falha com FileExistsError.
 ARQ_PID_API = RAIZ / ".api.pid"
+ARQ_LOG_API = RAIZ / ".api.log"
 
 URL_API = "http://localhost:8000"
 PORTA_API_PADRAO = 8000
@@ -959,7 +960,7 @@ def iniciar_api_local() -> bool:
     um programa Python comum; o Uvicorn e o servidor que a deixa acessivel.
 
     O processo fica em segundo plano e o numero dele (PID) e gravado em
-    `.neon/api.pid`, para a opcao 9 conseguir parar depois. Sem esse arquivo,
+    `.api.pid`, para a opcao 9 conseguir parar depois. Sem esse arquivo,
     sobraria um servidor rodando sem ninguem saber como encerrar.
     """
     titulo("Subindo a API localmente (sem Docker)")
@@ -972,7 +973,13 @@ def iniciar_api_local() -> bool:
         return False
 
     if api_esta_no_ar():
-        ok("a API ja esta respondendo em " + URL_API + " — nao vou subir outra.")
+        # A API ja responde: pode ter sido subida por fora. Registro o PID que
+        # esta na porta para a opcao 9 conseguir encerrar depois.
+        pid = processo_na_porta(PORTA_API_PADRAO)
+        if pid:
+            ARQ_PID_API.write_text(str(pid), encoding="utf-8")
+        ok("a API ja esta respondendo em " + URL_API + " — nao vou subir outra." +
+           (" Anotei o PID " + str(pid) + " para a opcao 9 conseguir parar." if pid else ""))
         return True
 
     if not exigir_arquivo(DIR_API / "app" / "main.py", "e o ponto de entrada da aplicacao"):
@@ -984,12 +991,19 @@ def iniciar_api_local() -> bool:
     print("  # iniciar a API em segundo plano")
     print("  $ " + " ".join(comando))
     try:
-        processo = subprocess.Popen(
-            comando,
-            cwd=str(DIR_API),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
+        # A saida vai para um arquivo, nao para um pipe: pipe sem leitura enche
+        # o buffer (~64 KB) e o servidor trava no meio de um teste. O arquivo
+        # tambem serve de evidencia quando a API morre sozinha.
+        saida_api = open(ARQ_LOG_API, "w", encoding="utf-8")
+        try:
+            processo = subprocess.Popen(
+                comando,
+                cwd=str(DIR_API),
+                stdout=saida_api,
+                stderr=subprocess.STDOUT,
+            )
+        finally:
+            saida_api.close()
     except OSError as falha:
         erro("nao consegui iniciar o Uvicorn: " + str(falha))
         o_que_fazer("confira se fastapi e uvicorn estao instalados:",
@@ -1008,11 +1022,11 @@ def iniciar_api_local() -> bool:
             return True
         if processo.poll() is not None:
             # O processo morreu: provavelmente faltou biblioteca ou o import falhou.
-            saida = b""
-            if processo.stdout is not None:
-                saida = processo.stdout.read() or b""
+            saida = ""
+            if ARQ_LOG_API.exists():
+                saida = ARQ_LOG_API.read_text(encoding="utf-8", errors="replace")
             erro("a API encerrou sozinha antes de responder.")
-            for linha in saida.decode("utf-8", "replace").splitlines()[-6:]:
+            for linha in saida.splitlines()[-6:]:
                 print("         " + linha)
             o_que_fazer("instale as dependencias da API:",
                         "  pip install -r meu-loop-agente/workspace/api/requirements.txt")
@@ -1025,28 +1039,132 @@ def iniciar_api_local() -> bool:
     return False
 
 
-def parar_api_local() -> None:
-    """Encerra a API que foi iniciada pela opcao 6 (se ela estiver rodando)."""
-    if not ARQ_PID_API.exists():
-        aviso("nao ha registro de API iniciada por este instalador.")
-        return
+def processo_na_porta(porta: int = PORTA_API_PADRAO):
+    """Devolve o PID que esta escutando na porta, ou None se ela estiver livre.
+
+    Por que existe: o `.api.pid` so cobre a API que ESTE instalador subiu. Se o
+    Uvicorn foi iniciado por fora, o arquivo nao existe e o menu ficaria sem
+    como encerrar o servidor. Aqui a pergunta muda: em vez de "qual processo eu
+    anotei?", pergunto ao sistema operacional "quem esta usando a porta 8000?".
+
+    Funciona nos dois mundos: `netstat` no Windows, `lsof` no Linux/macOS.
+    """
     try:
-        pid = int(ARQ_PID_API.read_text(encoding="utf-8").strip())
-    except ValueError:
-        aviso("o arquivo .neon/api.pid esta invalido; vou apaga-lo.")
-        ARQ_PID_API.unlink(missing_ok=True)
-        return
+        if platform.system() == "Windows":
+            resultado = subprocess.run(["netstat", "-ano", "-p", "tcp"],
+                                       capture_output=True, text=True, timeout=15,
+                                       encoding="utf-8", errors="replace")
+            for linha in resultado.stdout.splitlines():
+                campos = linha.split()
+                # TCP  127.0.0.1:8000  0.0.0.0:0  LISTENING  7784
+                if (len(campos) >= 5
+                        and campos[0].upper() == "TCP"
+                        and campos[1].endswith(":" + str(porta))
+                        and campos[3].upper() == "LISTENING"):
+                    return int(campos[4])
+        else:
+            resultado = subprocess.run(["lsof", "-ti", "tcp:" + str(porta)],
+                                       capture_output=True, text=True, timeout=15)
+            primeiro = resultado.stdout.split()[:1]
+            if primeiro:
+                return int(primeiro[0])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    return None
 
-    if platform.system() == "Windows":
-        comando = ["taskkill", "/PID", str(pid), "/F"]
-    else:
-        comando = ["kill", str(pid)]
 
-    certo, _ = rodar(comando, "encerrar a API local (PID " + str(pid) + ")",
-                     dica_se_falhar="o processo pode ja ter sido encerrado manualmente.")
-    if certo:
-        ok("API local encerrada.")
+def nome_do_processo(pid: int):
+    """Diz o nome do programa por tras de um PID (ex.: `python.exe`), ou None.
+
+    Serve para nao encerrar o processo errado: antes de matar, o menu mostra de
+    quem se trata. Se o PID ja morreu, devolve None.
+    """
+    try:
+        if platform.system() == "Windows":
+            resultado = subprocess.run(["tasklist", "/FI", "PID eq " + str(pid),
+                                        "/FO", "CSV", "/NH"],
+                                       capture_output=True, text=True, timeout=15,
+                                       encoding="cp850", errors="replace")
+            linha = (resultado.stdout or "").strip().splitlines()
+            if not linha or "INFO:" in linha[0]:
+                return None
+            return linha[0].split(",")[0].strip('"')
+
+        resultado = subprocess.run(["ps", "-p", str(pid), "-o", "comm="],
+                                   capture_output=True, text=True, timeout=15)
+        nome = (resultado.stdout or "").strip()
+        return nome or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def parar_api_local() -> bool:
+    """Encerra a API local — pelo registro de PID **e** pela porta que ela ocupa.
+
+    Por que duas fontes: o `.api.pid` so existe quando foi a opcao 6 que subiu a
+    API. Se o Uvicorn foi iniciado por fora (um comando digitado a mao, ou por
+    outra ferramenta), nao ha PID gravado — e a versao anterior deste menu
+    respondia "nao ha registro de API" e deixava o servidor rodando. Agora, sem
+    PID, eu pergunto ao sistema operacional quem esta escutando na porta 8000.
+    """
+    titulo("Encerrando a API local")
+
+    candidatos = []  # lista de (pid, de onde veio)
+
+    if ARQ_PID_API.exists():
+        try:
+            candidatos.append((int(ARQ_PID_API.read_text(encoding="utf-8").strip()),
+                               "registro .api.pid"))
+        except ValueError:
+            aviso("o arquivo .api.pid esta invalido; vou apaga-lo e procurar pela porta.")
+            ARQ_PID_API.unlink(missing_ok=True)
+
+    pid_da_porta = processo_na_porta(PORTA_API_PADRAO)
+    if pid_da_porta is not None and all(pid_da_porta != pid for pid, _ in candidatos):
+        candidatos.append((pid_da_porta, "porta " + str(PORTA_API_PADRAO)))
+
+    if not candidatos:
+        aviso("nao achei API rodando: nao ha .api.pid e a porta " +
+              str(PORTA_API_PADRAO) + " esta livre.")
+        ok("nada para encerrar.")
+        return True
+
+    for pid, origem in candidatos:
+        nome = nome_do_processo(pid)
+        if nome is None:
+            aviso("o PID " + str(pid) + " (" + origem + ") nao existe mais — ja foi encerrado.")
+            continue
+
+        explicar("Achei o processo " + str(pid) + " (" + nome + "), dono da " + origem + ".")
+
+        # Guarda: se nao parecer o servidor Python, e melhor perguntar antes.
+        if "python" not in nome.lower():
+            aviso("esse processo NAO parece ser a API (esperava python/uvicorn).")
+            if not confirmar("Encerrar o processo " + str(pid) + " (" + nome + ") mesmo assim?",
+                             padrao_sim=False):
+                ok("mantive o processo " + str(pid) + ".")
+                continue
+
+        if platform.system() == "Windows":
+            comando = ["taskkill", "/PID", str(pid), "/F", "/T"]
+        else:
+            comando = ["kill", "-9", str(pid)]
+
+        certo, _ = rodar(comando, "encerrar a API local (PID " + str(pid) + ")",
+                         dica_se_falhar="o processo pode ja ter sido encerrado manualmente.")
+
     ARQ_PID_API.unlink(missing_ok=True)
+
+    if processo_na_porta(PORTA_API_PADRAO) is not None:
+        erro("a porta " + str(PORTA_API_PADRAO) + " continua ocupada.")
+        o_que_fazer("veja quem esta nela e decida com calma:",
+                    '  netstat -ano | findstr :' + str(PORTA_API_PADRAO),
+                    "para encerrar um PID especifico:",
+                    "  taskkill /PID <numero> /F")
+        return False
+
+    ok("API local encerrada e porta " + str(PORTA_API_PADRAO) + " liberada.")
+    return True
 
 
 def subir_api(ambiente: str = None) -> bool:
@@ -1407,7 +1525,7 @@ def desinstalar(ambiente: str = None) -> None:
             "    DROP TABLE ipca;",
         )
         parar_api_local()
-        ok("ambiente local encerrado. Banco da nuvem preservado.")
+        ok("banco da nuvem preservado.")
         return
 
     titulo("Desinstalacao")

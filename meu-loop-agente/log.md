@@ -117,3 +117,15 @@
 - **Fonte da medição**: MEDIDA — os 4 casos rodaram contra a API no ar apontando para o Neon e os números vieram do banco (`/ipca/serie` = 563 itens, `?tipo=real` = 561 itens)
 - **Justificativa do aceite**: o ganho não está na métrica, e sim na dirigibilidade: qualquer pessoa repete o comando do curl, compara com o esperado escrito na tela e entende por que passou ou falhou. É o mesmo princípio do degrau — evidência, não opinião
 
+## Iteração 10
+- **Hipótese**: A opção 9 não encerrava a API quando ela tinha sido iniciada fora do menu, porque só confiava no arquivo `.api.pid`. Descobrir o dono da porta 8000 pelo sistema operacional resolve o caso — e, de quebra, o `stdout=PIPE` sem leitura precisa virar arquivo de log, senão o buffer enche e o servidor trava
+- **Arquivos alterados**: instalar.py (`processo_na_porta`, `nome_do_processo`, `parar_api_local` reescrita, opção 6 registrando o PID descoberto e gravando a saída em `.api.log`), .gitignore, README.md, docs/evidencias/18-opcao-9-por-porta.txt (novo), docs/img/20-opcao-9-por-porta.png (novo)
+- **Métrica antes**: 3 endpoints
+- **Métrica depois**: 3 endpoints
+- **Melhoria**: 0,00% — correção de defeito na ferramenta; a métrica do degrau não muda
+- **Comandos passaram**: Sim (`py_compile`; cenário A com porta livre → "nada para encerrar"; cenário B com Uvicorn iniciado por fora, sem `.api.pid` → achou o PID pela porta, mostrou `python.exe`, encerrou e liberou; cenário C opção 6 → PID gravado e `.api.log` com o startup)
+- **Decisão**: ACEITO
+- **Data/hora**: 2026-10-29T20:40:00Z
+- **Fonte da medição**: MEDIDA — os três cenários rodaram nesta máquina, com a porta conferida antes e depois por `netstat`
+- **Justificativa do aceite**: o defeito foi reproduzido antes da correção (o dono tentou duas vezes e a opção 9 respondia "não há registro de API") e o mesmo cenário passou depois. Corrigir a causa — perguntar ao sistema quem ocupa a porta — vale mais que pedir ao usuário para matar processo à mão
+

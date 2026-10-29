@@ -24,6 +24,7 @@ gerou e a entrada digitada. O resto é a saída, copiada sem edição.
 | `15-neon-tabela-populada.txt` | A tabela `ipca` foi criada e recebeu **563 linhas** (561 + 2), conferidas por 3 consultas | `neon psql` com `init.sql` e `seed.sql` |
 | `16-neon-api-endpoints.txt` | A API local responde os 3 endpoints lendo o banco na nuvem (`origem: nuvem (DATABASE_URL)`) | `python instalar.py` (entrada `6`) |
 | `17-testes-com-feedback.txt` | Cada endpoint aparece com comando, esperado, obtido e veredito — **4 de 4 passaram**, com os números conferidos (563 e 561) | `python instalar.py` (entrada `7`, depois `0`) |
+| `18-opcao-9-por-porta.txt` | A opção 9 encerra a API **mesmo sem o `.api.pid`**: descobre o dono da porta 8000, mostra o PID e libera | `python instalar.py` (entrada `9`, depois `0`) |
 
 Todas foram geradas na máquina de desenvolvimento, **sem Docker**, porque nenhuma delas
 precisa de container.

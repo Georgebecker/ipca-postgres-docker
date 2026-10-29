@@ -109,7 +109,9 @@ python instalar.py
 
 Um menu em português guia a instalação: confere o Docker, cria o `.env` perguntando a
 senha, sobe o banco, cria a tabela, carrega os dados, sobe a API e testa os 3 endpoints.
-A opção `8` faz tudo na ordem; a `9` desinstala explicando antes o que será apagado; e a
+A opção `8` faz tudo na ordem; a `9` desinstala explicando antes o que será apagado (e,
+no modo Neon, encerra a API mesmo que ela tenha sido iniciada por fora — ela descobre o
+dono da porta 8000, não depende de ter um PID anotado); e a
 `10` lista todos os comandos manuais, com o efeito e a saída esperada de cada um — para
 quem quer digitar em vez de usar o menu.
 

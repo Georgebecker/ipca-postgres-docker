@@ -4,8 +4,8 @@
   "meta_absoluta": 3,
   "meta_percentual": null,
   "progresso": {
-    "iteracao_atual": 9,
-    "aceitos": 9,
+    "iteracao_atual": 10,
+    "aceitos": 10,
     "rejeitados": 0,
     "rejeicoes_consecutivas": 0
   },
@@ -47,9 +47,15 @@
       "valor": 3,
       "decisao": "ACEITO",
       "resumo": "verificacao com comando, esperado, obtido e veredito (4 casos)"
+    },
+    {
+      "iteracao": 10,
+      "valor": 3,
+      "decisao": "ACEITO",
+      "resumo": "opcao 9 encerra a API pela porta quando nao ha .api.pid; saida da opcao 6 vai para .api.log"
     }
   ],
-  "atualizado_em": "2026-10-29T20:05:00Z",
+  "atualizado_em": "2026-10-29T20:40:00Z",
   "estado_inicial": {
     "data": "2026-10-29",
     "banco_existe": false,

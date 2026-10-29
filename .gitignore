@@ -37,3 +37,4 @@ logs/
 Thumbs.db
 .neon
 .api.pid
+.api.log

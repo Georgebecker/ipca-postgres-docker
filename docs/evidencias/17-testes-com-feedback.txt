@@ -1,4 +1,4 @@
-Evidência 12 — verificação dos endpoints com feedback completo (29/10/2026)
+Evidência 17 — verificação dos endpoints com feedback completo (29/10/2026)
 
 Prova que cada endpoint é testado com comando, resultado esperado, resultado obtido
 e veredito — não apenas um "ok" solto. 4 de 4 passaram contra o banco no Neon.

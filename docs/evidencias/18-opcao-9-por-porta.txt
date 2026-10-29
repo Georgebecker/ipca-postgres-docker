@@ -1,0 +1,28 @@
+Evidência 18 — a opção 9 encerra a API mesmo sem o .api.pid (29/10/2026)
+
+Reproduz o caso que falhou duas vezes: a API foi iniciada por fora do menu, então
+não havia PID gravado. Antes, a opção 9 respondia "não há registro de API" e o
+servidor continuava na porta 8000. Agora ela pergunta ao sistema quem ocupa a porta.
+
+Comando: python instalar.py   (entrada: 9, depois 0)
+
+# subindo a API POR FORA do instalador (simula comando digitado a mao)
+$ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+API no ar, PID 17744 — iniciada fora do menu
+
+# situacao que quebrava a opcao 9:
+.api.pid existe? NAO — nao ha PID gravado
+
+Encerrando a API local
+================================================================
+  Achei o processo 17744 (python.exe), dono da porta 8000.
+
+  # encerrar a API local (PID 17744)
+  $ taskkill /PID 17744 /F /T
+  [ok] comando concluido com sucesso.
+  [ok] API local encerrada e porta 8000 liberada.
+  [ok] banco da nuvem preservado.
+
+================================================================
+
+porta 8000 ocupada depois? NAO — liberada
